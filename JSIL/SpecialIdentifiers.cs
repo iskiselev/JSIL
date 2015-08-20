@@ -111,18 +111,40 @@ namespace JSIL {
             return new JSNewArrayExpression(elementType, dimensions, initializer);
         }
 
-        public JSInvocationExpression NewDelegate (TypeReference delegateType, JSExpression thisReference, JSExpression targetMethod, JSMethod method) {
+        public JSInvocationExpression NewDelegate (TypeReference delegateType, JSExpression thisReference, JSExpression targetMethod)
+        {
+            var targetMethodAccess = targetMethod as JSMethodAccess;
+            var arguments = targetMethodAccess == null ? null : targetMethodAccess.Method.Reference
+                .Parameters.Select(
+                    (parameter, index) =>
+                        (JSExpression) new JSRawOutputIdentifier(parameter.ParameterType, "arguments[{0}]", index))
+                .ToArray();
+
+            bool isDelegateCreation = targetMethodAccess != null && targetMethodAccess.Method.Reference.Name == "Invoke" &&
+                                      TypeUtil.IsDelegateType(targetMethodAccess.Method.Reference.DeclaringType);
+
             return JSInvocationExpression.InvokeStatic(
                 new JSDotExpression(
                     new JSType(delegateType),
-                    new JSFakeMethod("New", delegateType, new[] { TypeSystem.Object, TypeSystem.Object }, MethodTypes)
-                ), 
-                method == null ? new [] { thisReference, targetMethod } : new [] {
-                    thisReference, 
-                    targetMethod, 
-                    new JSDefferedExpression(new JSMethodOfExpression(method.Reference, method.Method, method.MethodTypes, method.GenericArguments)),  },
+                    new JSFakeMethod("New", delegateType, new[] {TypeSystem.Object, TypeSystem.Object}, MethodTypes)
+                    ),
+                targetMethodAccess == null
+                    ? new[] {thisReference, targetMethod}
+                    : new[] {
+                        thisReference,
+                        !isDelegateCreation
+                        ? new JSDefferedExpression(
+                            targetMethodAccess.IsStatic
+                            ? JSInvocationExpression.InvokeStatic(targetMethodAccess.Method.Reference.DeclaringType, targetMethodAccess.Method, arguments)
+                            : targetMethodAccess.IsVirtual
+                                ? JSInvocationExpression.InvokeMethod(targetMethodAccess.Method.Reference.DeclaringType, targetMethodAccess.Method, thisReference, arguments)
+                                : JSInvocationExpression.InvokeBaseMethod(targetMethodAccess.Method.Reference.DeclaringType, targetMethodAccess.Method, thisReference, arguments))
+                        : targetMethod,
+                        new JSDefferedExpression(new JSMethodOfExpression(
+                            targetMethodAccess.Method.Reference, targetMethodAccess.Method.Method, targetMethodAccess.Method.MethodTypes, targetMethodAccess.Method.GenericArguments)),
+                    },
                 true
-            );
+                );
         }
 
         public JSNewArrayElementReference NewElementReference (JSExpression target, JSExpression index) {

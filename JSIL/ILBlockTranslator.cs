@@ -3141,7 +3141,7 @@ namespace JSIL {
 
             return JSIL.NewDelegate(
                 constructor.DeclaringType,
-                thisArg, methodRef, methodMember
+                thisArg, methodRef
             );
         }
 
