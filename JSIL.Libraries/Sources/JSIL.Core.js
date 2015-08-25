@@ -20,6 +20,12 @@ JSIL.StructFormatWarnings = false;
 JSIL.$NextAssemblyId = 0;
 JSIL.PrivateNamespaces = {};
 JSIL.AssemblyShortNames = {};
+
+JSIL.ReservedIdentifiers = [
+  "name", "length", "arity", "constructor",
+  "caller", "arguments", "call", "apply", "bind"
+];
+
 var $private = null;
 
 
@@ -1015,7 +1021,13 @@ JSIL.ResolvedName.prototype.setLazy = function (getter) {
   JSIL.SetLazyValueProperty(this.parent, this.key, getter);
 };
 JSIL.ResolvedName.prototype.define = function (declaration) {
-  Object.defineProperty(this.parent, this.key, declaration);
+  var target = this.parent;
+
+  var isWindow = (Object.getPrototypeOf(target) === Object.getPrototypeOf(JSIL.GlobalNamespace));
+  if (isWindow && "configurable" in declaration)
+    delete declaration["configurable"];  
+
+  Object.defineProperty(target, this.key, declaration);
 
   var descriptor = Object.getOwnPropertyDescriptor(this.parent, this.key);
 
@@ -6018,6 +6030,10 @@ JSIL.MakeEnum = function (_descriptor, _members) {
       if (typeof (value) === "function")
         continue;
 
+      var escapedKey = key;
+      if (JSIL.ReservedIdentifiers.indexOf(key) >= 0)
+        escapedKey = "$" + key;
+
       value = Math.floor(value);
 
       $.__Type__.__Names__.push(key);
@@ -6029,7 +6045,7 @@ JSIL.MakeEnum = function (_descriptor, _members) {
         }
       };
 
-      JSIL.SetLazyValueProperty($, key, makeGetter(key, value));
+      JSIL.SetLazyValueProperty($, escapedKey, makeGetter(key, value));
 
       var memberDescriptor = ib.ParseDescriptor({Public: true, Static: true}, key);
       var mb = new JSIL.MemberBuilder(context);
