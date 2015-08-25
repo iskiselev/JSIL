@@ -10,6 +10,7 @@ namespace JSIL.SimpleTests
     using NUnit.Framework;
 
     [TestFixture]
+    [Category("Translated")]
     public class SimpleTestCasesForTranslatedBcl : GenericTestFixture
     {
         public static readonly string BootsrapperFileName =
@@ -22,6 +23,7 @@ namespace JSIL.SimpleTests
         {
             TypeInfoProvider = MakeDefaultProvider();
             AssemblyCache = new AssemblyCache();
+            NameSuffix = " (Translated BCL)";
         }
 
         protected override Dictionary<string, string> SetupEvaluatorEnvironment()
@@ -52,6 +54,7 @@ namespace JSIL.SimpleTests
                 c.Assemblies.Ignored.Add("System\\.Runtime\\.Serialization\\.Formatters\\.Soap,");
                 c.Assemblies.Ignored.Add("System\\.Runtime\\.DurableInstancing,");
                 c.Assemblies.Ignored.Add("System\\.Data\\.SqlXml,");
+                c.Assemblies.Ignored.Add("^Mono\\.");
                 c.Assemblies.Ignored.Add("JSIL\\.Meta,");
 
                 c.Assemblies.Proxies.Add(Path.Combine(ComparisonTest.JSILFolder, "JSIL.Proxies.Bcl.dll"));
@@ -73,11 +76,21 @@ namespace JSIL.SimpleTests
                 );
         }
 
+        protected IEnumerable<TestCaseData> SimpleTestCasesSourceForTranslatedBcl()
+        {
+            return FolderTestSource("SimpleTestCasesForTranslatedBcl", TypeInfoProvider, AssemblyCache, false);
+        }
+
         [Test]
         [TestCaseSource("SimpleTestCasesSourceForTranslatedBcl")]
         public void TestCasesTranslatedBcl(object[] parameters)
         {
             RunTestCase(parameters, null, null);
+        }
+
+        protected IEnumerable<TestCaseData> SimpleTestCasesSourceForStubbedBcl()
+        {
+            return FolderTestSource("SimpleTestCasesForStubbedBcl", TypeInfoProvider, AssemblyCache, false);
         }
 
         [Test]
@@ -87,6 +100,11 @@ namespace JSIL.SimpleTests
             RunTestCase(parameters, null, null);
         }
 
+        protected IEnumerable<TestCaseData> SimpleTestCasesSource()
+        {
+            return FolderTestSource("SimpleTestCases", TypeInfoProvider, AssemblyCache, false);
+        }
+
         [Test]
         [TestCaseSource("SimpleTestCasesSource")]
         public void SimpleTestCases(object[] parameters)
@@ -94,8 +112,15 @@ namespace JSIL.SimpleTests
             RunTestCase(parameters, null, null);
         }
 
+        protected IEnumerable<TestCaseData> ExpressionTestCasesSourceForTranslatedBcl()
+        {
+            // TODO: Why we cannot reuse TypeInfoProvider here?
+            return FolderTestSource("ExpressionTestCases", null, AssemblyCache, false);
+        }
+
         [Test]
         [TestCaseSource("ExpressionTestCasesSourceForTranslatedBcl")]
+        [FailsOnMono]
         public void ExpressionTestCasesForTranslatedBcl(object[] parameters)
         {
             Func<Configuration> makeConfiguration = () =>
@@ -111,27 +136,6 @@ namespace JSIL.SimpleTests
                     Path.GetFullPath(Path.Combine(ComparisonTest.TestSourceFolder, "..", "Libraries",
                         "JSIL.ExpressionInterpreter.js"))
                 });
-        }
-
-        protected IEnumerable<TestCaseData> SimpleTestCasesSourceForTranslatedBcl()
-        {
-            return FolderTestSource("SimpleTestCasesForTranslatedBcl", TypeInfoProvider, AssemblyCache, false);
-        }
-
-        protected IEnumerable<TestCaseData> ExpressionTestCasesSourceForTranslatedBcl()
-        {
-            // TODO: Why we cannot reuse TypeInfoProvider here?
-            return FolderTestSource("ExpressionTestCases", null, AssemblyCache, false);
-        }
-
-        protected IEnumerable<TestCaseData> SimpleTestCasesSourceForStubbedBcl()
-        {
-            return FolderTestSource("SimpleTestCasesForStubbedBcl", TypeInfoProvider, AssemblyCache, false);
-        }
-
-        protected IEnumerable<TestCaseData> SimpleTestCasesSource()
-        {
-            return FolderTestSource("SimpleTestCases", TypeInfoProvider, AssemblyCache, false);
         }
 
         protected object[] BootstrapArguments()

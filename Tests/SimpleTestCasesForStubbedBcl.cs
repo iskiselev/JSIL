@@ -18,10 +18,12 @@ namespace JSIL.SimpleTests
 
         private readonly AssemblyCache AssemblyCache;
         private readonly TypeInfoProvider TypeInfoProvider;
+
         public SimpleTestCasesForStubbedBcl()
         {
             TypeInfoProvider = MakeDefaultProvider();
             AssemblyCache = new AssemblyCache();
+            NameSuffix = " (Stubbed BCL)";
         }
 
         [TestFixtureSetUp]
@@ -50,6 +52,7 @@ namespace JSIL.SimpleTests
                 c.Assemblies.Ignored.Add("System\\.Runtime\\.Serialization\\.Formatters\\.Soap,");
                 c.Assemblies.Ignored.Add("System\\.Runtime\\.DurableInstancing,");
                 c.Assemblies.Ignored.Add("System\\.Data\\.SqlXml,");
+                c.Assemblies.Ignored.Add("^Mono\\.");
                 c.Assemblies.Ignored.Add("JSIL\\.Meta,");
 
                 c.Assemblies.Proxies.Add(Path.Combine(ComparisonTest.JSILFolder, "JSIL.Proxies.Bcl.dll"));

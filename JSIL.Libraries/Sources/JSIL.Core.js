@@ -302,8 +302,12 @@ JSIL.$GetSpecialType = function (name) {
   JSIL.TypeObjectPrototype.get_Assembly = function() { 
     return this.__Context__.__Assembly__; 
   };
-  JSIL.TypeObjectPrototype.get_BaseType = function() { 
-    return this.__BaseType__; 
+  JSIL.TypeObjectPrototype.get_BaseType = function () {
+    if (typeof (this.__BaseType__) !== "function")
+      return this.__BaseType__;
+
+    // Workaround for numeric types
+    return $jsilcore.System.ValueType.__Type__;
   };
   JSIL.TypeObjectPrototype.get_Namespace = function() { 
     // FIXME: Probably wrong for nested types.
@@ -2128,6 +2132,10 @@ JSIL.ResolveGenericTypeReference = function (obj, context) {
 };
 
 JSIL.$ResolveGenericTypeReferenceInternal = function (obj, context) {
+  if ((typeof (obj) === "function")) {
+    obj = obj.__Type__;
+  }
+
   if ((typeof (obj) !== "object") || (obj === null))
     return null;
 
@@ -9591,19 +9599,27 @@ JSIL.GetMemberAttributes = function (memberInfo, inherit, attributeType, result)
   var memberType = memberInfo.GetType().get_FullName();
 
   if (inherit) {
-    if (memberType !== "System.Type")
-      throw new System.NotImplementedException("Inherited attributes only supported for types");
-
     if (!result)
       result = [];
 
-    var currentType = memberInfo;
-    while (currentType && currentType.GetType) {
-      JSIL.GetMemberAttributes(currentType, false, attributeType, result);
-      currentType = currentType.__BaseType__;
-    }
+    if (memberType === "System.RuntimeType") {
+      var currentType = memberInfo;
+      while (currentType && currentType.GetType) {
+        JSIL.GetMemberAttributes(currentType, false, attributeType, result);
+        currentType = currentType.__BaseType__;
+      }
 
-    return result;
+      return result;
+    } else if (memberType === "System.Reflection.MethodInfo" && memberInfo._descriptor.Virtual) {
+      var currentType = memberInfo.get_DeclaringType();
+      while (currentType && currentType.GetType) {
+        var foundMethod = JSIL.GetMethodInfo(currentType.__PublicInterface__, memberInfo.get_Name(), memberInfo._data.signature, false, null);
+        if (foundMethod != null) {
+          JSIL.GetMemberAttributes(foundMethod, false, attributeType, result);
+        }
+        currentType = currentType.__BaseType__;
+      }
+    }
   }
 
   var attributes = memberInfo.__CachedAttributes__;
