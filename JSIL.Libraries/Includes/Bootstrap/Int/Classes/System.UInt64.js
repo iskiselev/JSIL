@@ -350,4 +350,9 @@ JSIL.MakeStruct("System.ValueType", "System.UInt64", true, [], function ($) {
     JSIL.MakeCastMethods(
       $.publicInterface, $.typeObject, "int64"
     );
+
+  $.ImplementInterfaces(
+    /* 0 */ $jsilcore.TypeRef("System.IConvertible")
+  );
+
 });
