@@ -37,6 +37,7 @@ namespace JSIL.Compiler {
 
         public readonly SolutionBuildConfiguration SolutionBuilder = new SolutionBuildConfiguration();
 
+        public bool? Quiet;
         public bool? AutoLoadConfigFiles;
         public bool? UseLocalProxies;
         public bool? ReuseTypeInfoAcrossAssemblies;
@@ -53,8 +54,10 @@ namespace JSIL.Compiler {
 
             var cc = result as JSIL.Compiler.Configuration;
             if (cc == null)
-                throw new ArgumentException("Result must be a Compiler.Configuration", "result");
+                throw new ArgumentException("Result must be a Compiler.Configuration but was " + result.GetType(), "result");
 
+            if (Quiet.HasValue)
+                cc.Quiet = Quiet;
             if (AutoLoadConfigFiles.HasValue)
                 cc.AutoLoadConfigFiles = AutoLoadConfigFiles;
             if (UseLocalProxies.HasValue)
@@ -86,7 +89,7 @@ namespace JSIL.Compiler {
             cc.ContributingPaths = cc.ContributingPaths.Concat(ContributingPaths).ToArray();
         }
 
-        public Configuration Clone () {
+        public override Translator.Configuration Clone () {
             var result = new Configuration();
             MergeInto(result);
             return result;

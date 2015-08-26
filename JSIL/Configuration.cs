@@ -105,11 +105,18 @@ namespace JSIL.Translator {
         public bool? TuneGarbageCollection;
         public string FilenameEscapeRegex;
         public string AssemblyCollectionName;
+        public string EmitterFactoryName;
 
         public double? FrameworkVersion;
 
         public readonly AssemblyConfiguration Assemblies = new AssemblyConfiguration();
         public readonly CodeGeneratorConfiguration CodeGenerator = new CodeGeneratorConfiguration();
+
+        public virtual Configuration Clone () {
+            var result = new Configuration();
+            MergeInto(result);
+            return result;
+        }
 
         public virtual void MergeInto (Configuration result) {
             if (ApplyDefaults.HasValue)
@@ -138,6 +145,8 @@ namespace JSIL.Translator {
                 result.FilenameEscapeRegex = FilenameEscapeRegex;
             if (AssemblyCollectionName != null)
                 result.AssemblyCollectionName = AssemblyCollectionName;
+            if (EmitterFactoryName != null)
+                result.EmitterFactoryName = EmitterFactoryName;
 
             Assemblies.MergeInto(result.Assemblies);
             CodeGenerator.MergeInto(result.CodeGenerator);

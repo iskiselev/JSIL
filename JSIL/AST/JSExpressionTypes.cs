@@ -3187,8 +3187,8 @@ namespace JSIL.Ast {
         }
     }
 
-    public class JSDefferedExpression : JSExpression {
-        public JSDefferedExpression(JSExpression innerExpression)
+    public class JSDeferredExpression : JSExpression {
+        public JSDeferredExpression(JSExpression innerExpression)
             : base(new [] { innerExpression})
         {
         }
@@ -3233,6 +3233,66 @@ namespace JSIL.Ast {
 
         public override string ToString () {
             return "((" + Invocation.ToString() + "))";
+        }
+    }
+
+    public class JSFieldDeclaration : JSExpression {
+        public readonly FieldInfo Field;
+        public readonly string Name;
+
+        public JSFieldDeclaration (FieldInfo fieldInfo, JSExpression descriptor, string name, JSExpression fieldType, JSExpression defaultValue) 
+            : base (descriptor, fieldType, defaultValue)
+        {
+            Field = fieldInfo;
+            Name = name;
+        }
+
+        public JSExpression Descriptor {
+            get {
+                return Values[0];
+            }
+        }
+
+        public JSExpression FieldType {
+            get {
+                return Values[1];
+            }
+        }
+
+        public JSExpression DefaultValue {
+            get {
+                return Values[2];
+            }
+        }
+    }
+
+    public class JSConstantDeclaration : JSExpression {
+        public readonly FieldInfo Field;
+        public readonly string Name;
+
+        public JSConstantDeclaration (FieldInfo fieldInfo, JSExpression descriptor, string name, JSExpression fieldType, JSExpression value) 
+            : base (descriptor, fieldType, value)
+        {
+            Field = fieldInfo;
+            Name = name;
+        }
+
+        public JSExpression Descriptor {
+            get {
+                return Values[0];
+            }
+        }
+
+        public JSExpression ConstantType {
+            get {
+                return Values[1];
+            }
+        }
+
+        public JSExpression Value {
+            get {
+                return Values[2];
+            }
         }
     }
 }

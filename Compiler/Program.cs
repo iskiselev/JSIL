@@ -16,6 +16,8 @@ using Mono.Cecil;
 
 namespace JSIL.Compiler {
     public class Program {
+        private static bool Quiet = false;
+
         static TypeInfoProvider CachedTypeInfoProvider = null;
         static Configuration CachedTypeInfoProviderConfiguration = null;
 
@@ -42,7 +44,7 @@ namespace JSIL.Compiler {
                 result.Path = Path.GetDirectoryName(Path.GetFullPath(filename));
                 result.ContributingPaths = new[] { Path.GetFullPath(filename) };
 
-                Console.Error.WriteLine("// Applied settings from '{0}'.", ShortenPath(filename));
+                InformationWriteLine("// Applied settings from '{0}'.", ShortenPath(filename));
 
                 return result;
             } catch (Exception ex) {
@@ -72,7 +74,7 @@ namespace JSIL.Compiler {
             foreach (var m in toMerge)
                 m.MergeInto(result);
 
-            return result;
+            return (Configuration)result;
         }
 
         /// <summary>
@@ -147,7 +149,7 @@ namespace JSIL.Compiler {
                     // If an executable references a DLL, we can be sure the DLL is going to get built anyway.
                     foreach (var anr in kvpInner.AllReferencesRecursive) {
                         if (anr.FullName == kvpOuter.Assembly.FullName) {
-                            Console.Error.WriteLine("// Not translating '{0}' directly because '{1}' references it.", Path.GetFileName(kvpOuter.Filename), Path.GetFileName(kvpInner.Filename));
+                            InformationWriteLine("// Not translating '{0}' directly because '{1}' references it.", Path.GetFileName(kvpOuter.Filename), Path.GetFileName(kvpInner.Filename));
                             skippedAssemblies.Add(kvpOuter.Filename);
                             goto skip;
                         }
@@ -167,6 +169,7 @@ namespace JSIL.Compiler {
         static Configuration ParseCommandLine (
             IEnumerable<string> arguments, List<BuildGroup> buildGroups, 
             Dictionary<string, IProfile> profiles, Dictionary<string, IAnalyzer> analyzers,
+            Dictionary<string, IEmitterFactory> emitterFactories,
             AssemblyCache assemblyCache
         ) {
             var baseConfig = new Configuration();
@@ -174,9 +177,10 @@ namespace JSIL.Compiler {
             IProfile defaultProfile = new Profiles.Default();
             var profileAssemblies = new List<string>();
             var analyzerAssemblies = new List<string>();
-            bool[] autoloadProfiles = new bool[] { true };
+            var emitterAssemblies = new List<string>();
+            bool[] autoloadProfiles  = new bool[] { true };
             bool[] autoloadAnalyzers = new bool[] { true };
-            string[] newDefaultProfile = new string[] { null };
+            bool[] autoloadEmitters  = new bool[] { true };
             List<string> filenames;
 
             {
@@ -184,6 +188,9 @@ namespace JSIL.Compiler {
                     {"o=|out=", 
                         "Specifies the output directory for generated javascript and manifests.",
                         (path) => commandLineConfig.OutputDirectory = Path.GetFullPath(path) },
+                    {"q|quiet",
+                        "Suppresses non-error/non-warning stderr messages.",
+                        (_) => commandLineConfig.Quiet = Quiet = true },
                     {"nac|noautoconfig", 
                         "Suppresses automatic loading of same-named .jsilconfig files located next to solutions and/or assemblies.",
                         (b) => commandLineConfig.AutoLoadConfigFiles = b == null },
@@ -241,9 +248,6 @@ namespace JSIL.Compiler {
                     {"pa=|profileAssembly=",
                         "Loads one or more project profiles from the specified profile assembly. Note that this does not force the profiles to be used.",
                         profileAssemblies.Add},
-                    {"dp=|defaultProfile=",
-                        "Overrides the default profile to use for projects by specifying the name of the new default profile.",
-                        (profileName) => newDefaultProfile[0] = profileName},
 
                     "CodeGenerator options",
                     {"os", 
@@ -258,6 +262,17 @@ namespace JSIL.Compiler {
                     {"ol", 
                         "Suppresses simplification of loop blocks.",
                         (b) => commandLineConfig.CodeGenerator.SimplifyLoops = b == null},
+
+                    "Emitter options",
+                    {"nae|noautoloademitters",
+                        "Disables automatic loading of emitter assemblies from the compiler directory.",
+                        (b) => autoloadEmitters[0] = (b == null)},
+                    {"ea=|emitterAssembly=",
+                        "Specifies an assembly to load emitters from.",
+                        emitterAssemblies.Add},
+                    {"e=|emitter=",
+                        "Specifies an emitter factory to use instead of the default.",
+                        (emitterName) => commandLineConfig.EmitterFactoryName = emitterName}
                 };
 
                 filenames = os.Parse(arguments);
@@ -288,6 +303,12 @@ namespace JSIL.Compiler {
                         "JSIL.Analysis.*.dll"
                     ));
 
+                if (autoloadEmitters[0])
+                    emitterAssemblies.AddRange(Directory.GetFiles(
+                        GetJSILDirectory(), 
+                        "JSIL.Emitters.*.dll"
+                    ));
+
                 foreach (var filename in profileAssemblies) {
                     var fullPath = Path.GetFullPath(filename);
 
@@ -309,6 +330,18 @@ namespace JSIL.Compiler {
                             analyzers.Add(analyzerInstance.GetType().Name, analyzerInstance);
                     } catch (Exception exc) {
                         Console.Error.WriteLine("Warning: Failed to load analyzer '{0}': {1}", filename, exc);
+                    }
+                }
+
+                foreach (var filename in emitterAssemblies) {
+                    var fullPath = Path.GetFullPath(filename);
+
+                    try {
+                        IEmitterFactory factoryInstance = CreateExtensionInstance<IEmitterFactory>(fullPath);
+                        if (factoryInstance != null)
+                            emitterFactories.Add(factoryInstance.GetType().Name, factoryInstance);
+                    } catch (Exception exc) {
+                        Console.Error.WriteLine("Warning: Failed to load emitter '{0}': {1}", filename, exc);
                     }
                 }
             }
@@ -390,7 +423,7 @@ namespace JSIL.Compiler {
                     if (!candidateProfile.IsAppropriateForSolution(buildResult))
                         continue;
 
-                    Console.Error.WriteLine("// Auto-selected the profile '{0}' for this project.", candidateProfile.GetType().Name);
+                    InformationWriteLine("// Auto-selected the profile '{0}' for this project.", candidateProfile.GetType().Name);
                     profile = candidateProfile;
                     break;
                 }
@@ -537,7 +570,8 @@ namespace JSIL.Compiler {
             const int scale = 40;
 
             return (progress) => {
-                Console.Error.Write("// {0} ", description);
+                if (!Quiet)
+                    Console.Error.Write("// {0} ", description);
 
                 var previous = new int[1] { 0 };
 
@@ -547,35 +581,58 @@ namespace JSIL.Compiler {
                     if (delta > 0) {
                         previous[0] = current;
 
-                        for (var i = 0; i < delta; i++)
-                            Console.Error.Write(".");
+                        if (!Quiet) {
+                            for (var i = 0; i < delta; i++)
+                                Console.Error.Write(".");
+                        }
                     }
                 };
 
                 progress.Finished += (s, e) => {
                     var delta = scale - previous[0];
-                    for (var i = 0; i < delta; i++)
-                        Console.Error.Write(".");
 
-                    Console.Error.WriteLine(" done.");
+                    if (!Quiet) {
+                        for (var i = 0; i < delta; i++)
+                            Console.Error.Write(".");
+                    }
+
+                    InformationWriteLine(" done.");
                 };
             };
         }
 
+        static IEmitterFactory GetEmitterFactory (
+            Configuration configuration,
+            Dictionary<string, IEmitterFactory> emitterFactories
+        ) {
+            if (configuration.EmitterFactoryName == null)
+                return null;
+
+            IEmitterFactory result;
+            if (!emitterFactories.TryGetValue(configuration.EmitterFactoryName, out result)) {
+                if (!emitterFactories.TryGetValue(configuration.EmitterFactoryName + "EmitterFactory", out result)) {
+                    Console.WriteLine("// Loaded emitter factories:");
+                    foreach (var kvp in emitterFactories)
+                        Console.WriteLine(kvp.Key);
+                    throw new Exception("No emitter factory named '" + configuration.EmitterFactoryName + "' or '" + configuration.EmitterFactoryName + "EmitterFactory'");
+                }
+            }
+
+            return result;
+        }
+
         static AssemblyTranslator CreateTranslator (
-            Configuration configuration, AssemblyManifest manifest, AssemblyCache assemblyCache
+            Configuration configuration, AssemblyManifest manifest, AssemblyCache assemblyCache,
+            Dictionary<string, IEmitterFactory> emitterFactories,
+            Dictionary<string, IAnalyzer> analyzers
         ) {
             TypeInfoProvider typeInfoProvider = null;
 
-            Console.Error.WriteLine(
+            InformationWriteLine(
                 "// Using .NET framework {0} in {1} GC mode. Tuned GC {2}.",
                 Environment.Version.ToString(),
                 System.Runtime.GCSettings.IsServerGC ? "server" : "workstation",
-#if TARGETTING_FX_4_5
                 configuration.TuneGarbageCollection.GetValueOrDefault(true) ? "enabled" : "disabled"
-#else
-                "disabled (must be built in .NET 4.5 mode)"
-#endif
             );
 
             if (
@@ -586,10 +643,14 @@ namespace JSIL.Compiler {
                     typeInfoProvider = CachedTypeInfoProvider;
             }
 
+            IEmitterFactory emitterFactory = GetEmitterFactory(configuration, emitterFactories);
+
             var translator = new AssemblyTranslator(
                 configuration, typeInfoProvider, manifest, new AssemblyDataResolver(configuration, assemblyCache), 
                 onProxyAssemblyLoaded: (name, classification) => 
-                    Console.Error.WriteLine("// Loaded proxies from '{0}'", ShortenPath(name))                
+                    InformationWriteLine("// Loaded proxies from '{0}'", ShortenPath(name)),
+                emitterFactory: emitterFactory,
+                analyzers: analyzers.Values
             );
 
             translator.Decompiling += MakeProgressHandler       ("Decompiling ");
@@ -597,7 +658,7 @@ namespace JSIL.Compiler {
             translator.Writing += MakeProgressHandler           ("Writing JS  ");
 
             translator.AssemblyLoaded += (fn, classification) =>
-                Console.Error.WriteLine("// Loaded {0} ({1})", ShortenPath(fn), classification);
+                InformationWriteLine("// Loaded {0} ({1})", ShortenPath(fn), classification);
             translator.CouldNotLoadSymbols += (fn, ex) => {
             };
             translator.CouldNotResolveAssembly += (fn, ex) => 
@@ -642,11 +703,12 @@ namespace JSIL.Compiler {
             var buildGroups = new List<BuildGroup>();
             var profiles = new Dictionary<string, IProfile>();
             var analyzers = new Dictionary<string, IAnalyzer>();
+            var emitterFactories = new Dictionary<string, IEmitterFactory>();
             var manifest = new AssemblyManifest();
             var assemblyCache = new AssemblyCache();
             var processedAssemblies = new HashSet<string>();
 
-            var commandLineConfiguration = ParseCommandLine(arguments, buildGroups, profiles, analyzers, assemblyCache);
+            var commandLineConfiguration = ParseCommandLine(arguments, buildGroups, profiles, analyzers, emitterFactories, assemblyCache);
 
             if ((buildGroups.Count < 1) || (commandLineConfiguration == null)) {
                 Console.Error.WriteLine("// No assemblies specified to translate. Exiting.");
@@ -662,7 +724,7 @@ namespace JSIL.Compiler {
                     if (config.Assemblies.Ignored.Any(
                         (ignoreRegex) => Regex.IsMatch(filename, ignoreRegex, RegexOptions.IgnoreCase))
                     ) {
-                        Console.Error.WriteLine("// Ignoring build result '{0}' based on configuration.", Path.GetFileName(filename));
+                        InformationWriteLine("// Ignoring build result '{0}' based on configuration.", Path.GetFileName(filename));
                         continue;
                     }
 
@@ -726,31 +788,14 @@ namespace JSIL.Compiler {
                         analyzer.SetConfiguration(settings);
                     }
 
-                    using (var translator = CreateTranslator(localConfig, manifest, assemblyCache)) {
+                    emitterFactories["JavascriptEmitterFactory"] = new JavascriptEmitterFactory();
+
+                    using (var translator = CreateTranslator(
+                        localConfig, manifest, assemblyCache, emitterFactories, analyzers
+                    )) {
                         var ignoredMethods = new List<KeyValuePair<string, string[]>>();
                         translator.IgnoredMethod += (methodName, variableNames) =>
                             ignoredMethods.Add(new KeyValuePair<string, string[]>(methodName, variableNames));
-
-                        translator.AssembliesLoaded += definitions => {
-                                foreach (var analyzer in analyzers.Values) {
-                                    analyzer.AddAssemblies(definitions);
-                                }
-                            };
-
-                        translator.AnalyzeStarted += () => {
-                                foreach (var analyzer in analyzers.Values) {
-                                    analyzer.Analyze(translator._TypeInfoProvider);
-                                }
-                            };
-
-                        translator.MemberCanBeSkipped += member => {
-                                foreach (var analyzer in analyzers.Values) {
-                                    if (analyzer.MemberCanBeSkipped(member))
-                                        return true;
-                                }
-
-                                return false;
-                            }; 
 
                         var outputs = buildGroup.Profile.Translate(localVariables, translator, localConfig, filename, localConfig.UseLocalProxies.GetValueOrDefault(true));
                         if (localConfig.OutputDirectory == null)
@@ -761,7 +806,7 @@ namespace JSIL.Compiler {
                                 if (processedAssemblies.Contains(sa))
                                     continue;
 
-                                Console.Error.WriteLine("// Processing '{0}'", Path.GetFileName(sa));
+                                InformationWriteLine("// Processing '{0}'", Path.GetFileName(sa));
                                 processedAssemblies.Add(sa);
 
                                 buildGroup.Profile.ProcessSkippedAssembly(
@@ -773,17 +818,17 @@ namespace JSIL.Compiler {
                         var outputDir = MapPath(localConfig.OutputDirectory, localVariables, false);
                         CopiedOutputGatherer.EnsureDirectoryExists(outputDir);
 
-                        Console.Error.WriteLine("// Saving output to '{0}'.", ShortenPath(outputDir) + Path.DirectorySeparatorChar);
+                        InformationWriteLine("// Saving output to '{0}'.", ShortenPath(outputDir) + Path.DirectorySeparatorChar);
 
                         // Ensures that the log file contains the name of the profile that was actually used.
                         localConfig.Profile = localProfile.GetType().Name;
 
                         if (ignoredMethods.Count > 0)
-                            Console.Error.WriteLine("// {0} method(s) were ignored during translation. See the log for a list.", ignoredMethods.Count);
+                            InformationWriteLine("// {0} method(s) were ignored during translation. See the log for a list.", ignoredMethods.Count);
 
                         EmitLog(outputDir, localConfig, filename, outputs, ignoredMethods);
 
-                        buildGroup.Profile.WriteOutputs(localVariables, outputs, outputDir, Path.GetFileName(filename) + ".");
+                        buildGroup.Profile.WriteOutputs(localVariables, outputs, outputDir, Path.GetFileName(filename) + ".", Quiet);
 
                         totalFailureCount += translator.Failures.Count;
                     }
@@ -831,6 +876,13 @@ namespace JSIL.Compiler {
                 Path.Combine(logPath, String.Format("{0}.jsillog", Path.GetFileName(inputFile))),
                 logText.ToString()
             );
+        }
+
+        public static void InformationWriteLine (string text, params object[] values) {
+            if (Quiet)
+                return;
+
+            Console.Error.WriteLine(text, values);
         }
     }
 }

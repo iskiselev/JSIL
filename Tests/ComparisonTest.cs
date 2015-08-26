@@ -16,6 +16,7 @@ using MethodInfo = System.Reflection.MethodInfo;
 
 namespace JSIL.Tests {
     using System.Web.Script.Serialization;
+    using Compiler.Extensibility;
 
     public class ComparisonTest : IDisposable {
         public static readonly bool UseAppDomains = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("JsilUseAppDomainsInTest"));
@@ -42,7 +43,6 @@ namespace JSIL.Tests {
         public static readonly string JSILFolder;
         public static readonly string TestSourceFolder;
         public static readonly string JSShellPath;
-        public static readonly string DebugJSShellPath;
         public static readonly string LoaderJSPath;
         public static readonly string EvaluatorSetupCode;
         public static readonly string EvaluatorRunCode;
@@ -77,10 +77,8 @@ namespace JSIL.Tests {
 
             if (IsLinux) {
                 JSShellPath = "js";
-                DebugJSShellPath = "js";
             } else {
                 JSShellPath = Path.GetFullPath(Path.Combine(assemblyPath, "..", "Upstream", "SpiderMonkey", "js.exe"));
-                DebugJSShellPath = Path.GetFullPath(Path.Combine(assemblyPath, "..", "Upstream", "SpiderMonkey", "debug", "js.exe"));
             }
 
             var librarySourceFolder = Path.GetFullPath(Path.Combine(TestSourceFolder, "..", "Libraries"));
@@ -414,7 +412,8 @@ namespace JSIL.Tests {
             Func<Configuration> makeConfiguration = null,
             Action<Exception> onTranslationFailure = null,
             Action<AssemblyTranslator> initializeTranslator = null,
-            bool? scanForProxies = null
+            bool? scanForProxies = null,
+            IEnumerable<IAnalyzer> analyzers = null
         ) {
             Configuration configuration;
 
@@ -430,7 +429,11 @@ namespace JSIL.Tests {
 
             TOutput result;
 
-            using (var translator = new JSIL.AssemblyTranslator(configuration, TypeInfo, null, new AssemblyDataResolver(configuration, AssemblyCache))) {
+            using (var translator = new JSIL.AssemblyTranslator(
+                configuration, TypeInfo, null, 
+                assemblyDataResolver: new AssemblyDataResolver(configuration, AssemblyCache),
+                analyzers: analyzers
+            )) {
                 if (initializeTranslator != null)
                     initializeTranslator(translator);
 
@@ -477,7 +480,8 @@ namespace JSIL.Tests {
             Action<Exception> onTranslationFailure = null,
             Action<AssemblyTranslator> initializeTranslator = null,
             bool? scanForProxies = null,
-            bool shouldWritePrologue = true
+            bool shouldWritePrologue = true,
+            IEnumerable<IAnalyzer> analyzers = null
         ) {
             var translationStarted = DateTime.UtcNow.Ticks;
 
@@ -511,7 +515,8 @@ namespace JSIL.Tests {
                     makeConfiguration, 
                     onTranslationFailure,
                     initializeTranslator,
-                    scanForProxies
+                    scanForProxies,
+                    analyzers
                 );
             } else {
                 throw new InvalidDataException("Provided both JS filenames and assembly");
@@ -602,11 +607,12 @@ namespace JSIL.Tests {
         }
 
         public string RunJavascript (
-            string[] args, Func<Configuration> makeConfiguration = null,
+            string[] args, 
+            Func<Configuration> makeConfiguration = null,
             Action<Exception> onTranslationFailure = null,
-            Action<AssemblyTranslator> initializeTranslator = null
-        )
-        {
+            Action<AssemblyTranslator> initializeTranslator = null,
+            IEnumerable<IAnalyzer> analyzers = null
+        ) {
             Func<string> temp1;
             string temp4, temp5;
             long temp2, temp3;
@@ -614,7 +620,10 @@ namespace JSIL.Tests {
             return RunJavascript(
                 args, 
                 out temp1, out temp2, out temp3, out temp4, out temp5, 
-                makeConfiguration, null, onTranslationFailure, initializeTranslator
+                makeConfiguration: makeConfiguration, 
+                onTranslationFailure: onTranslationFailure, 
+                initializeTranslator: initializeTranslator, 
+                analyzers: analyzers
             );
         }
 
@@ -624,15 +633,20 @@ namespace JSIL.Tests {
             JSEvaluationConfig evaluationConfig = null,
             Action<Exception> onTranslationFailure = null,
             Action<AssemblyTranslator> initializeTranslator = null,
-            bool? scanForProxies = null
+            bool? scanForProxies = null,
+            IEnumerable<IAnalyzer> analyzers = null
         ) {
             string temp1, temp2;
 
             return RunJavascript(
                 args, out generateJavascript, out elapsedTranslation, out elapsedJs, 
                 out temp1, out temp2,
-                makeConfiguration, evaluationConfig, onTranslationFailure, initializeTranslator,
-                scanForProxies
+                makeConfiguration: makeConfiguration, 
+                evaluationConfig: evaluationConfig, 
+                onTranslationFailure: onTranslationFailure, 
+                initializeTranslator: initializeTranslator,
+                scanForProxies: scanForProxies,
+                analyzers: analyzers
             );
         }
 
@@ -642,15 +656,18 @@ namespace JSIL.Tests {
             JSEvaluationConfig evaluationConfig = null,
             Action<Exception> onTranslationFailure = null,
             Action<AssemblyTranslator> initializeTranslator = null,
-            bool? scanForProxies = null
+            bool? scanForProxies = null,
+            IEnumerable<IAnalyzer> analyzers = null
         ) {
             var tempFilename = GenerateJavascript(
                 args, out generateJavascript, out elapsedTranslation, 
-                makeConfiguration, 
-                evaluationConfig == null || evaluationConfig.ThrowOnUnimplementedExternals, 
-                onTranslationFailure,
-                initializeTranslator,
-                scanForProxies
+                makeConfiguration,
+                throwOnUnimplementedExternals:
+                    evaluationConfig == null || evaluationConfig.ThrowOnUnimplementedExternals, 
+                onTranslationFailure: onTranslationFailure,
+                initializeTranslator: initializeTranslator,
+                scanForProxies: scanForProxies,
+                analyzers: analyzers
             );
 
             using (Evaluator = EvaluatorPool.Get()) {
@@ -846,8 +863,7 @@ namespace JSIL.Tests {
                 var jsex = ex as JavaScriptEvaluatorException;
                 Console.WriteLine("failed: " + ex.Message + " " + (ex.InnerException == null ? "" : ex.InnerException.Message));
 
-
-                var querySting = string.Join(
+                var queryString = string.Join(
                     "&",
                     (EvaluatorPool.EnvironmentVariables ?? new Dictionary<string, string>())
                         .Select(item => string.Format("{0}={1}", item.Key, item.Value))
@@ -862,7 +878,7 @@ namespace JSIL.Tests {
                         files.AddRange(evaluationConfig.AdditionalFilesToLoad);
                 }
 
-                Console.WriteLine("// {0}", GetTestRunnerLink(files, querySting));
+                Console.WriteLine("// {0}", GetTestRunnerLink(files, queryString));
 
                 if ((outputs[1] == null) && (jsex != null))
                     outputs[1] = jsex.Output;

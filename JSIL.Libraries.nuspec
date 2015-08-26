@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
   <metadata>
     <id>JSIL.Libraries</id>
-    <version>0.0.20150825.1510</version>
+    <version>0.0.20150826.1200</version>
     <authors>Igor Kiselev</authors>
     <description>JSIL compiler</description>
     <language>en-US</language>
