@@ -12,7 +12,7 @@ JSIL.XML.ReaderFromStream = function (stream) {
   if ((bytes[0] === 0xEF) && (bytes[1] === 0xBB) && (bytes[2] === 0xBF)) {
     xml = System.Text.Encoding.UTF8.$decode(bytes, 3, bytes.length - 3);
   } else {
-    xml = System.Text.Encoding.UTF8.$decode(bytes, 0, bytes.length);
+    xml = JSIL.StringFromByteArray(bytes);
   }
 
   return JSIL.XML.ReaderFromString(xml);

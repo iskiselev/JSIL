@@ -47,6 +47,8 @@ namespace JSIL.Tests {
         public static readonly string EvaluatorSetupCode;
         public static readonly string EvaluatorRunCode;
 
+        public static readonly string CurrentMetaRevision;
+
         public string StartupPrologue;
 
         public Func<string> GetTestRunnerQueryString = () => "";
@@ -60,6 +62,7 @@ namespace JSIL.Tests {
         public readonly AssemblyUtility AssemblyUtility;
         public readonly Metacomment[] Metacomments;
         public readonly TimeSpan CompilationElapsed;
+        public readonly bool     CompilationCacheHit;
         public readonly EvaluatorPool EvaluatorPool;
 
         private readonly AppDomain AssemblyAppDomain;
@@ -99,6 +102,9 @@ namespace JSIL.Tests {
     @"load({0});",
              Util.EscapeString(LoaderJSPath)
            );
+
+            if (CompilerUtil.TryGetMetaVersion(out CurrentMetaRevision))
+                Console.WriteLine("Using JSIL.Meta rev {0}", CurrentMetaRevision);
         }
 
         public static string MapSourceFileToTestFile (string sourceFile) {
@@ -186,9 +192,10 @@ namespace JSIL.Tests {
                     {
                         var helper = CrossDomainHelper.CreateFromCompileResultOnRemoteDomain(AssemblyAppDomain,
                             absoluteFilenames, assemblyName,
-                            compilerOptions);
+                            compilerOptions, CurrentMetaRevision);
                         Metacomments = helper.Metacomments;
                         AssemblyUtility = helper.AssemblyUtility;
+                        CompilationCacheHit = helper.WasCached;
                     }
                     catch (TargetInvocationException exception)
                     {
@@ -852,9 +859,15 @@ namespace JSIL.Tests {
                 if (AssemblyUtility == null)
                     writeJSOutput();
 
+                string compileTime;
+                if (CompilationCacheHit)
+                    compileTime = "cached";
+                else
+                    compileTime = string.Format("{0:0000}ms", CompilationElapsed.TotalMilliseconds);
+
                 Console.WriteLine(
-                    "passed: CL:{0:0000}ms TR:{2:0000}ms C#:{1:0000}ms JS:{3:0000}ms",
-                    CompilationElapsed.TotalMilliseconds,
+                    "passed: CL:{0} TR:{2:0000}ms C#:{1:0000}ms JS:{3:0000}ms",
+                    compileTime,
                     TimeSpan.FromTicks(elapsed[0]).TotalMilliseconds,
                     TimeSpan.FromTicks(elapsed[1]).TotalMilliseconds,
                     TimeSpan.FromTicks(elapsed[2]).TotalMilliseconds
@@ -901,7 +914,7 @@ namespace JSIL.Tests {
                     writeJSOutput();
                 }
 
-                if (dumpJsOnFailure && (generateJs() != null)) {
+                if (dumpJsOnFailure && (generateJs != null)) {
                     Console.WriteLine("// Generated javascript begins here //");
                     Console.WriteLine(generateJs());
                     Console.WriteLine("// Generated javascript ends here //");
@@ -923,12 +936,14 @@ namespace JSIL.Tests {
     {
         private readonly AssemblyUtility _assemblyUtility;
         private readonly Metacomment[] _metacomments;
+        private readonly bool _wasCached;
 
-        public CrossDomainHelper(string[] absoluteFilenames, string assemblyName, string compilerOptions)
+        public CrossDomainHelper(string[] absoluteFilenames, string assemblyName, string compilerOptions, string currentMetaRevision)
         {
-            var compileResult = CompilerUtil.Compile(absoluteFilenames, assemblyName, compilerOptions: compilerOptions);
+            var compileResult = CompilerUtil.Compile(absoluteFilenames, assemblyName, compilerOptions, currentMetaRevision);
             _assemblyUtility = new AssemblyUtility(compileResult.Assembly);
             _metacomments = compileResult.Metacomments;
+            _wasCached = compileResult.WasCached;
         }
 
         public CrossDomainHelper(string assemblyPath, bool reflectionOnly)
@@ -953,17 +968,17 @@ namespace JSIL.Tests {
                     );
         }
 
-        public static CrossDomainHelper CreateFromCompileResultOnRemoteDomain(AppDomain domain, IEnumerable<string> absoluteFilenames, string assemblyName, string compilerOptions)
+        public static CrossDomainHelper CreateFromCompileResultOnRemoteDomain(AppDomain domain, IEnumerable<string> absoluteFilenames, string assemblyName, string compilerOptions, string currentMetaRevision)
         {
             return domain == AppDomain.CurrentDomain
-                ? new CrossDomainHelper(absoluteFilenames.ToArray(), assemblyName, compilerOptions)
+                ? new CrossDomainHelper(absoluteFilenames.ToArray(), assemblyName, compilerOptions, currentMetaRevision)
                 : (CrossDomainHelper) domain.CreateInstanceFromAndUnwrap(
                     typeof (CrossDomainHelper).Assembly.Location,
                     typeof (CrossDomainHelper).FullName,
                     false,
                     BindingFlags.CreateInstance,
                     null,
-                    new object[] {absoluteFilenames.ToArray(), assemblyName, compilerOptions},
+                    new object[] {absoluteFilenames.ToArray(), assemblyName, compilerOptions, currentMetaRevision},
                     CultureInfo.InvariantCulture,
                     null
                     );
@@ -977,6 +992,10 @@ namespace JSIL.Tests {
         public Metacomment[] Metacomments
         {
             get { return _metacomments; }
+        }
+
+        public bool WasCached {
+            get { return _wasCached; }
         }
     }
 

@@ -143,7 +143,7 @@
         }
         return result;
       }
-    ).Overrides($jsilcore.TypeRef("System.Collections.Generic.IEqualityComparer`1", [$.GenericParameter("T")]), "Equals");
+    );
 
     $.Method({ Static: false, Public: true, Virtual: true }, "GetHashCode",
       new JSIL.MethodSignature($.Int32, [$.GenericParameter("T")]),
@@ -155,9 +155,10 @@
         }
         return result;
       }
-    ).Overrides($jsilcore.TypeRef("System.Collections.Generic.IEqualityComparer`1", [$.GenericParameter("T")]), "GetHashCode");
+    );
 
     $.ImplementInterfaces(
+      $jsilcore.TypeRef("System.Collections.Generic.IEqualityComparer`1", [$.GenericParameter("T")])
     );
 
     return function(newThisType) { $thisType = newThisType; };

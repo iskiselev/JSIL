@@ -855,7 +855,11 @@ namespace JSIL {
         }
 
         public void VisitNode (JSFakeMethod fakeMethod) {
-            Output.Identifier(fakeMethod.Name);
+            Output.Identifier(fakeMethod.Name, 
+                fakeMethod.Escape 
+                    ? EscapingMode.MemberIdentifier
+                    : EscapingMode.None
+            );
 
             var ga = fakeMethod.GenericArguments;
             if (ga != null) {
@@ -1413,12 +1417,13 @@ namespace JSIL {
                 (o) => o.WriteParameterList(function.Parameters) 
             );
 
-            if (function.TemporaryVariableCount > 0) {
+            var temporaryVarCount = function.TemporaryVariableTypes.Count;
+            if (temporaryVarCount > 0) {
                 Output.WriteRaw("var ");
-                for (var i = 0; i < function.TemporaryVariableCount; i++) {
+                for (var i = 0; i < temporaryVarCount; i++) {
                     Output.WriteRaw("$temp{0:X2}", i);
 
-                    if (i < (function.TemporaryVariableCount - 1))
+                    if (i < (temporaryVarCount - 1))
                         Output.WriteRaw(", ");
                     else
                         Output.Semicolon();
@@ -1687,7 +1692,18 @@ namespace JSIL {
                 Output.Space();
                 Output.Identifier(String.Format("$loop{0}", cont.TargetLoop.Value));
             } else if (GotoStack.Count > 0) {
-                GotoStack.Peek()(null);
+                // HACK: If we do an unlabelled 'continue' that will just loop through the labelgroup; we want to
+                //  continue the outer loop instead.
+                var enclosingLoop = Stack.OfType<JSLoopStatement>().First();
+                Output.WriteRaw("continue");
+
+                // FIXME: If unused loop names are stripped this won't work and everything is hosed!!!
+                if (enclosingLoop.Index.HasValue) {
+                    Output.Space();
+                    Output.Identifier(String.Format("$loop{0}", enclosingLoop.Index));
+                } else {
+                    Output.WriteRaw("/* WARNING: target loop had no index */");
+                }
             } else {
                 Output.WriteRaw("continue");
             }

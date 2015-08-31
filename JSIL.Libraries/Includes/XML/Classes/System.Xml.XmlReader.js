@@ -339,15 +339,11 @@ JSIL.ImplementExternals("System.Xml.XmlReader", function ($) {
     $.Method({ Static: false, Public: true }, "ReadElementString",
       (new JSIL.MethodSignature($.String, [], [])),
       function ReadElementString() {
-        if (!this.IsEmptyElement) {
           this.ReadStartElement();
 
           var result = this.ReadString();
           this.ReadEndElement();
           return result;
-        }
-        this.Read();
-        return "";
       }
     );
 
@@ -406,6 +402,16 @@ JSIL.ImplementExternals("System.Xml.XmlReader", function ($) {
           }
 
           return result;
+      }
+    );
+
+    $.Method({ Static: false, Public: true }, "ReadSubtree",
+      (new JSIL.MethodSignature($xmlasms[16].TypeRef("System.Xml.XmlReader"), [], [])),
+      function ReadSubtree() {
+        var result = JSIL.CreateInstanceOfType(System.Xml.XmlReader.__Type__, "$fromDOMNode", [this._current.cloneNode(true)]);
+
+        this._state = sSiblings;
+        return result;
       }
     );
 

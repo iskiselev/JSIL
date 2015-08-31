@@ -104,18 +104,6 @@ JSIL.ImplementExternals(
       compareInternal
     );
 
-    $.Method({ Static: true, Public: true }, "Compare",
-      new JSIL.MethodSignature($jsilcore.TypeRef("System.Int32"), [
-          $jsilcore.TypeRef("System.String"), $jsilcore.TypeRef("System.Int32"),
-          $jsilcore.TypeRef("System.String"), $jsilcore.TypeRef("System.Int32"),
-          $jsilcore.TypeRef("System.Int32"),
-          $jsilcore.TypeRef("System.StringComparison")
-      ], []),
-      function (lhs, indexL, rhs, indexR, length, comparison) {
-        return compareInternal(lhs.substr(indexL, length), rhs.substr(indexR, length), comparison);
-      }
-    );
-
     var concatInternal = function (firstValue) {
       if (JSIL.IsArray(firstValue) && arguments.length == 1) {
         return JSIL.ConcatString.apply(null, firstValue);
@@ -281,13 +269,6 @@ JSIL.ImplementExternals(
           for (var i = 0; i < count; i++)
             destination[destinationIndex + i] = str[sourceIndex + i];
         }
-      }
-    );
-
-    $.Method({ Static: false, Public: true }, "get_Length",
-      new JSIL.MethodSignature($.Int32, [], []),
-      function () {
-        return this.length;
       }
     );
   }

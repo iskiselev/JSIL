@@ -33,7 +33,7 @@ namespace JSIL {
 
         public readonly SpecialIdentifiers SpecialIdentifiers;
 
-        public int TemporaryVariableCount = 0;
+        public List<TypeReference> TemporaryVariableTypes = new List<TypeReference>();
         protected int RenamedVariableCount = 0;
         protected int UnlabelledBlockCount = 0;
         protected int NextSwitchId = 0;
@@ -592,6 +592,7 @@ namespace JSIL {
         ) {
             foreach (var transformer in FunctionTransformers) {
                 var externalReplacement = transformer.MaybeReplaceMethodCall(
+                    ThisMethodReference,
                     method, methodInfo, 
                     thisExpression, arguments, 
                     resultType, explicitThis
@@ -1971,11 +1972,15 @@ namespace JSIL {
             return result;
         }
 
-        private JSRawOutputIdentifier MakeTemporaryVariable (TypeReference type) {
-            return new JSRawOutputIdentifier(
-                type,
-                "$temp{0:X2}", TemporaryVariableCount++
-            );
+        private JSTemporaryVariable MakeTemporaryVariable (TypeReference type) {
+            var index = TemporaryVariableTypes.Count;
+            TemporaryVariableTypes.Add(type);
+
+            var id = string.Format("$temp{0:X2}", index);
+
+            var result = new JSTemporaryVariable(id, type, ThisMethodReference);
+            Variables.Add(id, result);
+            return result;
         }
 
         private JSExpression Translate_CompoundAssignment_MultidimensionalArray (

@@ -3049,6 +3049,7 @@ JSIL.FixupInterfaces = function (publicInterface, typeObject) {
     for (var j = 0; j < members.length; j++) {
       var member = members[j];
       var qualifiedName = JSIL.$GetSignaturePrefixForType(iface) + member._descriptor.EscapedName;
+      var originalName = member._descriptor.OriginalName;
       var signature = member._data.signature || null;
       var signatureQualifiedName = null;
 
@@ -3074,9 +3075,24 @@ JSIL.FixupInterfaces = function (publicInterface, typeObject) {
         case "MethodInfo":
         case "ConstructorInfo":
           // FIXME: Match signatures
+          var parameterTypes = $jsilcore.$MethodGetParameterTypes(member);
+          var returnType = $jsilcore.$MethodGetReturnType(member);
+          var expectedInstanceName = $jsilcore.$MemberInfoGetName(member);
+
           var matchingMethods = typeObject.$GetMatchingInstanceMethods(
-            $jsilcore.$MemberInfoGetName(member), $jsilcore.$MethodGetParameterTypes(member), $jsilcore.$MethodGetReturnType(member)
+            expectedInstanceName, parameterTypes, returnType
           );
+
+          // HACK: If this interface method was renamed at compile time,
+          //  look for unqualified instance methods using the old name.
+          if ((originalName !== null) && (matchingMethods.length === 0)) {
+            if (trace)
+              console.log("Search for " + expectedInstanceName + " failed, looking for " + originalName);
+
+            matchingMethods = typeObject.$GetMatchingInstanceMethods(
+              originalName, parameterTypes, returnType
+            );
+          }
 
           if (matchingMethods.length === 0) {
             isMissing = true;
@@ -6561,6 +6577,11 @@ JSIL.InterfaceBuilder.prototype.ParseDescriptor = function (descriptor, name, si
     result.Static = descriptor.Static = false;
   }
 
+  if (typeof (descriptor.OriginalName) === "string")
+    result.OriginalName = descriptor.OriginalName;
+  else
+    result.OriginalName = null;
+
   result.Name = name;
   result.EscapedName = escapedName;
 
@@ -8268,6 +8289,15 @@ JSIL.InterfaceMethod.prototype.Rebind = function (newTypeObject, newSignature) {
   return result;
 };
 
+JSIL.InterfaceMethod.prototype.$StaticMethodNotFound = function (thisReference, methodName) {
+  JSIL.RuntimeErrorFormat(
+    "Interface method '{0}' not found in context '{1}'", [
+      this.signature.toString(this.methodName),
+      thisReference
+    ]
+  );
+};
+
 JSIL.InterfaceMethod.prototype.GetVariantInvocationCandidates = function (thisReference) {
   var cache = this.variantInvocationCandidateCache;
   var typeId = thisReference.__ThisTypeId__;
@@ -9105,6 +9135,8 @@ JSIL.DefaultValueInternal = function (typeObject, typePublicInterface) {
     return 0;
   } else if (typeObject.__IsEnum__) {
     return typePublicInterface[typeObject.__ValueToName__[0]];
+  } else if (typeObject.__IsNullable__) {
+    return null;
   } else {
     return new typePublicInterface();
   }
@@ -9162,18 +9194,21 @@ JSIL.Array.$GetEraseImplementation = function (elementTypeObject, elementTypePub
       ""
     ];
 
+    var isStruct = !elementTypeObject.__IsNullable__ &&
+      elementTypeObject.__IsStruct__;
+
     if (elementTypeObject.__IsNativeType__) {
       body.push("var defaultValue = JSIL.DefaultValueInternal(elementTypeObject, elementTypePublicInterface);");
     } else if (elementTypeObject.__IsEnum__) {
       body.push("var defaultValue = elementTypePublicInterface.$Cast(0);");
-    } else if (!elementTypeObject.__IsStruct__) {
+    } else if (!isStruct) {
       body.push("var defaultValue = null;");
     }
 
     body.push("");
     body.push("for (var i = 0; i < length; i = (i + 1) | 0)");
 
-    if (elementTypeObject.__IsStruct__) {
+    if (isStruct) {
       body.push("  elements[(i + startIndex) | 0] = new elementTypePublicInterface();");
     } else {
       body.push("  elements[(i + startIndex) | 0] = defaultValue;");

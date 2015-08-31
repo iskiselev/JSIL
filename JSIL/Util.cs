@@ -37,7 +37,8 @@ namespace JSIL.Internal {
             "export", "extends", "super", "let",
             "package", "interface", "implements", "private",
             "protected", "public", "static", "yield",
-            "const", "true", "false", "null", "arguments"
+            "const", "true", "false", "null", "arguments",
+            "eval"
         };
 
         // We need to flag these names as reserved because they are properties of
@@ -734,14 +735,31 @@ namespace JSIL.Internal {
         }
     }
 
-    public class TemporaryVariable {
-        public static JSRawOutputIdentifier ForFunction (
-            JSFunctionExpression function, TypeReference type
+    public static class TemporaryVariable {
+        public static JSTemporaryVariable ForFunction (
+            JSFunctionExpression function, TypeReference type,
+            IFunctionSource functionSource
         ) {
-            return new JSRawOutputIdentifier(
-                type,
-                "$temp{0:X2}", function.TemporaryVariableCount++
-            );
+            var index = function.TemporaryVariableTypes.Count;
+            function.TemporaryVariableTypes.Add(type);
+
+            MethodReference methodRef = null;
+            if (function.Method != null)
+                methodRef = function.Method.Reference;
+
+            var id = string.Format("$temp{0:X2}", index);
+            var result = new JSTemporaryVariable(id, type, methodRef);
+
+            function.AllVariables.Add(id, result);
+
+            // HACK: If the static analysis data for the function is stale, this temporary
+            //  variable might get eliminated later despite being in use.
+            // We should really just fix all the transforms that aren't invalidating static
+            //  analysis data when they should, but this is good enough for now.
+            if (function.Method != null)
+                functionSource.InvalidateFirstPass(function.Method.QualifiedIdentifier);
+
+            return result;
         }
     }
 

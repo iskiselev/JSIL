@@ -284,6 +284,12 @@ JSIL.ImplementExternals("System.Int64", function ($) {
             return r;
     });
 
+    $.Method({ Static: false, Public: true }, "GetHashCode",
+    (new JSIL.MethodSignature($.Int32, [], [])),
+    function Int64_GetHashCode() {
+      return this.a | ((this.b & 0xff) << 24);
+    });
+
     // Not present in mscorlib
     $.Method({ Static: false, Public: true }, "ToNumber",
     (new JSIL.MethodSignature($.Double, [], [])),
@@ -324,8 +330,4 @@ JSIL.MakeStruct("System.ValueType", "System.Int64", true, [], function ($) {
     JSIL.MakeCastMethods(
       $.publicInterface, $.typeObject, "int64"
     );
-
-  $.ImplementInterfaces(
-    $jsilcore.TypeRef("System.IConvertible")
-  );
 });

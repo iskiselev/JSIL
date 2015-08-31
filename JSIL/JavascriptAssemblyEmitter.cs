@@ -26,7 +26,7 @@ namespace JSIL {
         }
 
         // HACK
-        private TypeInfoProvider _TypeInfoProvider {
+        private TypeInfoProvider TypeInfo {
             get {
                 return Translator.TypeInfoProvider;
             }
@@ -114,11 +114,13 @@ namespace JSIL {
         public void EmitInterfaceDefinition (
             DecompilerContext context, IAstEmitter astEmitter, TypeDefinition iface
         ) {
+            var typeInfo = TypeInfo.GetTypeInformation(iface);
+
             Formatter.Identifier("JSIL.MakeInterface", EscapingMode.None);
             Formatter.LPar();
             Formatter.NewLine();
             
-            Formatter.Value(Util.DemangleCecilTypeName(iface.FullName));
+            Formatter.Value(Util.DemangleCecilTypeName(typeInfo.FullName));
             Formatter.Comma();
 
             Formatter.Value(iface.IsPublic);
@@ -144,7 +146,7 @@ namespace JSIL {
                     if (Translator.ShouldSkipMember(m))
                         continue;
 
-                    var methodInfo = _TypeInfoProvider.GetMethod(m);
+                    var methodInfo = TypeInfo.GetMethod(m);
 
                     if ((methodInfo == null) || methodInfo.IsIgnored)
                         continue;
@@ -154,10 +156,21 @@ namespace JSIL {
                     Formatter.Identifier("Method", EscapingMode.None);
                     Formatter.LPar();
 
-                    Formatter.WriteRaw("{}");
+                    var renamedName = methodInfo.Name;
+                    var offset = renamedName.IndexOf("`");
+                    if (offset > 0)
+                        renamedName = renamedName.Substring(0, offset);
+
+                    if (renamedName != m.Name) {
+                        Formatter.WriteRaw("{OriginalName: ");
+                        Formatter.Value(m.Name);
+                        Formatter.WriteRaw("}");
+                    } else {
+                        Formatter.WriteRaw("{}");
+                    }
                     Formatter.Comma();
 
-                    Formatter.Value(Util.EscapeIdentifier(m.Name, EscapingMode.String));
+                    Formatter.Value(Util.EscapeIdentifier(renamedName, EscapingMode.String));
                     Formatter.Comma();
 
                     Formatter.MethodSignature(m, methodInfo.Signature, refContext);
@@ -168,7 +181,7 @@ namespace JSIL {
             }
 
             foreach (var p in iface.Properties) {
-                var propertyInfo = _TypeInfoProvider.GetProperty(p);
+                var propertyInfo = TypeInfo.GetProperty(p);
                 if ((propertyInfo != null) && propertyInfo.IsIgnored)
                     continue;
 
@@ -238,7 +251,7 @@ namespace JSIL {
             } else if (TypeUtil.IsEnum(ca.Type)) {
                 var longValue = Convert.ToInt64(ca.Value);
                 var result = JSEnumLiteral.TryCreate(
-                    _TypeInfoProvider.GetExisting(ca.Type),
+                    TypeInfo.GetExisting(ca.Type),
                     longValue
                 );
                 if (result != null)
@@ -273,6 +286,10 @@ namespace JSIL {
 
                 foreach (var attribute in member.CustomAttributes) {
                     if (Translator.ShouldSkipMember(attribute.AttributeType))
+                        continue;
+
+                    // Don't emit Meta attributes into the output JS
+                    if (attribute.AttributeType.Namespace == "JSIL.Meta")
                         continue;
 
                     if (!isFirst || standalone)
@@ -357,7 +374,7 @@ namespace JSIL {
             JSRawOutputIdentifier dollar, MethodInfo methodInfo = null
         ) {
             if (methodInfo == null)
-                methodInfo = _TypeInfoProvider.GetMemberInformation<Internal.MethodInfo>(method);
+                methodInfo = TypeInfo.GetMemberInformation<Internal.MethodInfo>(method);
 
             bool isExternal, isReplaced, methodIsProxied;
 
@@ -585,7 +602,7 @@ namespace JSIL {
         }
 
         protected void EmitEnum (DecompilerContext context, TypeDefinition enm, IAstEmitter astEmitter) {
-            var typeInformation = _TypeInfoProvider.GetTypeInformation(enm);
+            var typeInformation = TypeInfo.GetTypeInformation(enm);
 
             if (typeInformation == null)
                 throw new InvalidDataException(String.Format(
@@ -819,7 +836,7 @@ namespace JSIL {
             if (Translator.ShouldSkipMember(property))
                 return;
 
-            var propertyInfo = _TypeInfoProvider.GetMemberInformation<Internal.PropertyInfo>(property);
+            var propertyInfo = TypeInfo.GetMemberInformation<Internal.PropertyInfo>(property);
             if ((propertyInfo == null) || propertyInfo.IsIgnored)
                 return;
 
@@ -862,7 +879,7 @@ namespace JSIL {
             if (Translator.ShouldSkipMember(@event))
                 return;
 
-            var eventInfo = _TypeInfoProvider.GetMemberInformation<Internal.EventInfo>(@event);
+            var eventInfo = TypeInfo.GetMemberInformation<Internal.EventInfo>(@event);
             if ((eventInfo == null) || eventInfo.IsIgnored)
                 return;
 
@@ -1129,7 +1146,7 @@ namespace JSIL {
             FieldDefinition field, JSRawOutputIdentifier dollar, 
             JSExpression defaultValue, bool isConstant
         ) {
-            var fieldInfo = _TypeInfoProvider.GetMemberInformation<Internal.FieldInfo>(field);
+            var fieldInfo = TypeInfo.GetMemberInformation<Internal.FieldInfo>(field);
             if ((fieldInfo == null) || fieldInfo.IsIgnored)
                 return;
 

@@ -8,12 +8,16 @@ before_install:
 
 install:
   - export NODEJS=$(dirname `nvm which $NODEJS_VERSION`)
+  - ci/download-asset.sh packages .
   - nuget restore JSIL.sln
+  - ci/upload-asset.sh packages packages &
   - nuget install NUnit.Runners -Version 2.6.4 -OutputDirectory testrunner 
 
 script:
   - xbuild /p:Configuration=Release /p:Platform=NoXna /v:m JSIL.sln
+  - ci/download-asset.sh compilecache /
   - mono ./testrunner/NUnit.Runners.2.6.4/tools/nunit-console.exe ./bin/Tests.DCE.dll ./bin/SimpleTests.dll ./bin/Tests.dll --run:$TestRun  --exclude:FailsOnMono\|\(FailsOnMonoWhenStubbed+Stubbed\)\|\(FailsOnMonoWhenStubbed+Translated\)
+  - ci/upload-asset.sh compilecache "/tmp/JSIL Tests"
 
 env:
   global:
@@ -21,5 +25,8 @@ env:
     - NODEJS_VERSION=0.10
   matrix:
     - TestRun=JSIL.Tests.DeadCodeEliminationTest,JSIL.Tests.APITests,JSIL.Tests.AnalysisTests,JSIL.Tests.ComparisonTests,JSIL.Tests.ConfigurationTests,JSIL.Tests.DependencyTests,JSIL.Tests.FailingTests,JSIL.Tests.FormattingTests,JSIL.Tests.GenericsTests,JSIL.Tests.MetadataTests,JSIL.Tests.PerformanceTests,JSIL.Tests.TypeInformationTests,JSIL.Tests.UnsafeTests,JSIL.Tests.VerbatimTests,JSIL.Tests.XMLTests,JSIL.Tests.ThreadingTests
+      JSIL_STORAGE_TAG=misc-tests
     - TestRun=JSIL.SimpleTests.SimpleTests,JSIL.SimpleTests.SimpleTestCasesForStubbedBcl
+      JSIL_STORAGE_TAG=stubbed-tests
     - TestRun=JSIL.SimpleTests.SimpleTestCasesForTranslatedBcl
+      JSIL_STORAGE_TAG=translated-tests

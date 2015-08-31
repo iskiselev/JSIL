@@ -406,17 +406,20 @@ namespace JSIL.Ast {
         public readonly TypeReference[] ParameterTypes;
         [JSAstTraverse(0)]
         public readonly JSExpression[] GenericArguments;
+        public readonly bool Escape;
 
         public JSFakeMethod (
             string name, TypeReference returnType,
             TypeReference[] parameterTypes, MethodTypeFactory methodTypes,
-            JSExpression[] genericArguments = null
+            JSExpression[] genericArguments = null,
+            bool escape = false
         ) {
             Name = name;
             ReturnType = returnType;
             ParameterTypes = parameterTypes ?? new TypeReference[0];
             MethodTypes = methodTypes;
             GenericArguments = genericArguments;
+            Escape = escape;
         }
 
         public override string Identifier {
@@ -601,6 +604,13 @@ namespace JSIL.Ast {
 
         public static JSClosureVariable New (ILVariable variable, MethodReference function) {
             return new JSClosureVariable(variable.Name, variable.Type, function);
+        }
+    }
+
+    [JSAstIgnoreInheritedMembers]
+    public class JSTemporaryVariable : JSVariable {
+        public JSTemporaryVariable (string name, TypeReference type, MethodReference function, JSExpression defaultValue = null) 
+            : base (name, type, function, defaultValue) {
         }
     }
 

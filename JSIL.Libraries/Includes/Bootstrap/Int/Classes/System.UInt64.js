@@ -340,6 +340,12 @@ JSIL.ImplementExternals("System.UInt64", function ($) {
             return truncated;
         }
     });
+
+    $.Method({ Static: false, Public: true }, "GetHashCode",
+    (new JSIL.MethodSignature($.Int32, [], [])),
+    function UInt64_GetHashCode() {
+      return this.a | ((this.b & 0xff) << 24);
+    });
 });
 
 JSIL.MakeStruct("System.ValueType", "System.UInt64", true, [], function ($) {
@@ -350,9 +356,4 @@ JSIL.MakeStruct("System.ValueType", "System.UInt64", true, [], function ($) {
     JSIL.MakeCastMethods(
       $.publicInterface, $.typeObject, "int64"
     );
-
-  $.ImplementInterfaces(
-    /* 0 */ $jsilcore.TypeRef("System.IConvertible")
-  );
-
 });
