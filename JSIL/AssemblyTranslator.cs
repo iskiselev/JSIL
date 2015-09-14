@@ -100,6 +100,8 @@ namespace JSIL {
         public event Action<TypeIdentifier> ProxyNotMatched;
         public event Action<QualifiedMemberIdentifier> ProxyMemberNotMatched;
 
+        public Func<bool, string, string> ChooseCustomAssemblyName;
+
         public readonly TypeInfoProvider TypeInfoProvider;
         public readonly IEmitterFactory EmitterFactory;
 
@@ -468,7 +470,6 @@ namespace JSIL {
         private TranslationResult TranslateInternal (
             string assemblyPath, bool scanForProxies = true
         ) {
-
             var result = new TranslationResult(this.Configuration, assemblyPath, Manifest);
             var assemblies = new [] {assemblyPath}.Union(this.Configuration.Assemblies.TranslateAdditional).Distinct()
                 .SelectMany(LoadAssembly).Distinct(new FullNameAssemblyComparer()).ToArray();
@@ -530,16 +531,25 @@ namespace JSIL {
 
             Action<int> writeAssembly = (i) => {
                 var assembly = assemblies[i];
-                var outputPath = FormatOutputFilename(assembly.Name) + EmitterFactory.FileExtension;
+
+                string outputPath = null;
+
+                if (ChooseCustomAssemblyName != null)
+                    outputPath = ChooseCustomAssemblyName(
+                        i == 0, assembly.Name.ToString()
+                    );
+                if (outputPath == null)
+                    outputPath = FormatOutputFilename(assembly.Name) + EmitterFactory.FileExtension;
 
                 long existingSize;
 
                 if (!Manifest.GetExistingSize(assembly, out existingSize)) {
                     using (var outputStream = new MemoryStream(DefaultStreamCapacity)) {
+                        var sourceMapBuilder = Configuration.BuildSourceMap.GetValueOrDefault() ? new SourceMapBuilder() : null;
                         var context = MakeDecompilerContext(assembly.MainModule);
 
                         try {
-                            TranslateSingleAssemblyInternal(context, assembly, outputStream);
+                            TranslateSingleAssemblyInternal(context, assembly, outputStream, sourceMapBuilder);
                         } catch (Exception exc) {
                             throw new Exception("Error occurred while generating javascript for assembly '" + assembly.FullName + "'.", exc);
                         }
@@ -548,7 +558,7 @@ namespace JSIL {
                             outputStream.GetBuffer(), 0, (int)outputStream.Length
                         );
 
-                        result.AddFile("Script", outputPath, segment);
+                        result.AddFile("Script", outputPath, segment, sourceMapBuilder:sourceMapBuilder);
 
                         Manifest.SetAlreadyTranslated(assembly, outputStream.Length);
                     }
@@ -906,12 +916,12 @@ namespace JSIL {
             );
         }
 
-        protected void TranslateSingleAssemblyInternal (DecompilerContext context, AssemblyDefinition assembly, Stream outputStream) {
+        protected void TranslateSingleAssemblyInternal (DecompilerContext context, AssemblyDefinition assembly, Stream outputStream, SourceMapBuilder sourceMapBuilder) {
             bool stubbed = IsStubbed(assembly);
 
             var tw = new StreamWriter(outputStream, Encoding.ASCII);
             var formatter = new JavascriptFormatter(
-                tw, this.TypeInfoProvider, Manifest, assembly, Configuration, stubbed
+                tw, sourceMapBuilder, this.TypeInfoProvider, Manifest, assembly, Configuration, stubbed
             );
 
             var assemblyEmitter = EmitterFactory.MakeAssemblyEmitter(this, assembly, formatter);

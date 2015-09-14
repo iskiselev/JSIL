@@ -50,6 +50,8 @@ namespace JSIL.Translator {
             public bool? AggressivelyUseElementProxies;
             public bool? EmitAllParameterNames;
             public bool? StripUnusedLoopNames;
+            public bool? IntroduceCharCasts;
+            public bool? IntroduceEnumCasts;
 
             public void MergeInto (CodeGeneratorConfiguration result) {
                 if (EliminateStructCopies.HasValue)
@@ -94,6 +96,10 @@ namespace JSIL.Translator {
                     result.EmitAllParameterNames = EmitAllParameterNames;
                 if (StripUnusedLoopNames.HasValue)
                     result.StripUnusedLoopNames = StripUnusedLoopNames;
+                if (IntroduceCharCasts.HasValue)
+                    result.IntroduceCharCasts = IntroduceCharCasts;
+                if (IntroduceEnumCasts.HasValue)
+                    result.IntroduceEnumCasts = IntroduceEnumCasts;
             }
         }
 
@@ -109,6 +115,7 @@ namespace JSIL.Translator {
         public string FilenameEscapeRegex;
         public string AssemblyCollectionName;
         public string EmitterFactoryName;
+        public bool? BuildSourceMap;
 
         public double? FrameworkVersion;
 
@@ -150,6 +157,9 @@ namespace JSIL.Translator {
                 result.AssemblyCollectionName = AssemblyCollectionName;
             if (EmitterFactoryName != null)
                 result.EmitterFactoryName = EmitterFactoryName;
+
+            if (BuildSourceMap != null)
+                result.BuildSourceMap = BuildSourceMap;
 
             Assemblies.MergeInto(result.Assemblies);
             CodeGenerator.MergeInto(result.CodeGenerator);
