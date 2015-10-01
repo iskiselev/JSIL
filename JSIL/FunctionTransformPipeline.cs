@@ -163,10 +163,14 @@ namespace JSIL.Internal {
                     } catch (Exception exc) {
                         string functionName;
 
-                        if ((Function.Method != null) && (Function.Method.Reference != null))
-                            functionName = Function.Method.Reference.FullName;
-                        else
-                            functionName = Function.DisplayName ?? "<unknown>";
+                        try {
+                            if ((Function.Method != null) && (Function.Method.Reference != null))
+                                functionName = Function.Method.Reference.FullName;
+                            else
+                                functionName = Function.DisplayName ?? "<unknown>";
+                        } catch {
+                            functionName = "<exception in FullName, yay mono>";
+                        }
 
                         throw new FunctionTransformFailureException(functionName, currentStage.Method.Name, exc);
                     }
@@ -269,8 +273,15 @@ namespace JSIL.Internal {
         // Pipeline stage implementations
 
         private bool DecomposeMutationOperators () {
-            if (Configuration.CodeGenerator.HintIntegerArithmetic.GetValueOrDefault(true))
-                new DecomposeMutationOperators(TypeSystem, TypeInfoProvider, FunctionSource).Visit(Function);
+            if (
+                Configuration.CodeGenerator.HintIntegerArithmetic.GetValueOrDefault(true) ||
+                Configuration.CodeGenerator.DecomposeAllMutationOperators.GetValueOrDefault(false)
+            ) {
+                new DecomposeMutationOperators(
+                    TypeSystem, TypeInfoProvider, FunctionSource,
+                    Configuration.CodeGenerator.DecomposeAllMutationOperators.GetValueOrDefault(false)
+                ).Visit(Function);
+            }
 
             return true;
         }
@@ -374,8 +385,9 @@ namespace JSIL.Internal {
 
         private bool ExpandCastExpressions () {
             new ExpandCastExpressions(
-                TypeSystem, SpecialIdentifiers.JS, SpecialIdentifiers.JSIL, TypeInfoProvider, MethodTypes
-                ).Visit(Function);
+                TypeSystem, SpecialIdentifiers.JS, SpecialIdentifiers.JSIL, TypeInfoProvider, MethodTypes,
+                Configuration.CodeGenerator.EmulateInt64.GetValueOrDefault(true)
+            ).Visit(Function);
 
             return true;
         }
@@ -464,10 +476,12 @@ namespace JSIL.Internal {
         }
 
         private bool EmulateInt64 () {
-            new EmulateInt64(
-                MethodTypes,
-                SpecialIdentifiers.TypeSystem
-                ).Visit(Function);
+            if (Translator.Configuration.CodeGenerator.EmulateInt64.GetValueOrDefault(true)) {
+                new EmulateInt64(
+                    MethodTypes,
+                    SpecialIdentifiers.TypeSystem
+                    ).Visit(Function);
+            }
 
             return true;
         }

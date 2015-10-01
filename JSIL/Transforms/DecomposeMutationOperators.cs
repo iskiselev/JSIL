@@ -13,11 +13,16 @@ namespace JSIL.Transforms {
         public readonly TypeSystem TypeSystem;
         public readonly TypeInfoProvider TypeInfo;
         public readonly IFunctionSource FunctionSource;
+        public readonly bool DecomposeAllMutations;
 
-        public DecomposeMutationOperators (TypeSystem typeSystem, TypeInfoProvider typeInfo, IFunctionSource functionSource) {
+        public DecomposeMutationOperators (
+            TypeSystem typeSystem, TypeInfoProvider typeInfo, 
+            IFunctionSource functionSource, bool decomposeAllMutations
+        ) {
             TypeSystem = typeSystem;
             TypeInfo = typeInfo;
             FunctionSource = functionSource;
+            DecomposeAllMutations = decomposeAllMutations;
         }
 
         public static JSExpression MakeLhsForAssignment (JSExpression rhs) {
@@ -31,6 +36,19 @@ namespace JSIL.Transforms {
                 );
 
             return rhs;
+        }
+
+        public static JSExpression MakeReadVersion (JSExpression e) {
+            var fa = e as JSFieldAccess;
+            var pa = e as JSPropertyAccess;
+            if ((fa != null) && fa.IsWrite)
+                return new JSFieldAccess(fa.ThisReference, fa.Field, false);
+            else if ((pa != null) && pa.IsWrite)
+                return new JSPropertyAccess(
+                    pa.ThisReference, pa.Property, false, pa.TypeQualified, pa.OriginalType, pa.OriginalMethod, pa.IsVirtualCall
+                );
+
+            return e;
         }
 
         public static JSBinaryOperatorExpression MakeUnaryMutation (
@@ -86,7 +104,7 @@ namespace JSIL.Transforms {
             var newBoe = new JSBinaryOperatorExpression(
                 JSOperator.Assignment, MakeLhsForAssignment(boe.Left),
                 new JSBinaryOperatorExpression(
-                    replacementOperator, boe.Left, boe.Right, intermediateType
+                    replacementOperator, MakeReadVersion(boe.Left), boe.Right, intermediateType
                 ),
                 leftType
             );
@@ -96,7 +114,7 @@ namespace JSIL.Transforms {
                 return result;
             } else {
                 var comma = new JSCommaExpression(
-                    newBoe, boe.Left
+                    newBoe, MakeReadVersion(boe.Left)
                 );
                 return comma;
             }
@@ -110,7 +128,7 @@ namespace JSIL.Transforms {
             JSExpression replacement;
 
             if (
-                (resultIsIntegral) &&
+                (resultIsIntegral || DecomposeAllMutations) &&
                 ((replacement = DeconstructMutationAssignment(ParentNode, boe, TypeSystem, resultType)) != null)
             ) {
                 ParentNode.ReplaceChild(boe, replacement);
