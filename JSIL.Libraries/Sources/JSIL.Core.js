@@ -2042,7 +2042,7 @@ JSIL.MakeProto = function (baseType, typeObject, typeName, isReferenceType, asse
   return prototype;
 };
 
-JSIL.MakeNumericType = function (baseType, typeName, isIntegral, typedArrayName) {
+JSIL.MakeNumericType = function (baseType, typeName, isIntegral, typedArrayName, declareAdditionalMembers) {
   var typeArgs = {
     BaseType: baseType,
     Name: typeName,
@@ -2124,8 +2124,11 @@ JSIL.MakeNumericType = function (baseType, typeName, isIntegral, typedArrayName)
         return $formatSignature().CallStatic($jsilcore.JSIL.System.NumberFormatter, "NumberToString", null, format, self, formatProvider).toString();
       }
     );
+    
     JSIL.MakeBoxMethod($);
-
+    
+    if (declareAdditionalMembers)
+      declareAdditionalMembers($);
   });
 };
 
