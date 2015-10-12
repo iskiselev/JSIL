@@ -22,5 +22,18 @@ $jsilcore.$MakeParseExternals = function ($, type, parse, tryParse) {
     (new JSIL.MethodSignature($.Boolean, [$.String, $jsilcore.TypeRef("JSIL.Reference", [type])], [])),
     tryParse
   );
+
+  $.Method({ Static: true, Public: true }, "TryParse",
+    (new JSIL.MethodSignature($.Boolean, [$.String, $jsilcore.TypeRef("System.IFormatProvider"), $jsilcore.TypeRef("JSIL.Reference", [type])], [])),
+    tryParse
+  );
+
+  $.Method({ Static: true, Public: true }, "TryParse",
+    (new JSIL.MethodSignature($.Boolean, [$.String, $jsilcore.TypeRef("System.Globalization.NumberStyles"), $jsilcore.TypeRef("System.IFormatProvider"), $jsilcore.TypeRef("JSIL.Reference", [type])], [])),
+        function (input, style, formatProvider, output) {
+          // TODO: Really use fromat provider
+          return tryParse(input, style, output);
+        }
+  );
 };
 /*? }*/
