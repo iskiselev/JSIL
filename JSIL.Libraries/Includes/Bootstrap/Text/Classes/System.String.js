@@ -295,4 +295,5 @@ JSIL.ImplementExternals(
 
 JSIL.MakeClass("System.Object", "System.String", true, [], function ($) {
   $.Field({ Static: true, Public: true }, "Empty", $.String, "");
+  $.Property({ Public: true, Static: false }, "Length");
 });
