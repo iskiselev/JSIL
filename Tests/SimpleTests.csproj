@@ -136,6 +136,7 @@
     <None Include="SimpleTestCases\Issue844.cs" />
     <None Include="SimpleTestCases\FailsOnMono\ArrayEmpty.cs" />
     <None Include="SimpleTestCases\NumericTypesIConvertible.cs" />
+    <None Include="SimpleTestCases\Int64CharArithmetic_Issue867.cs" />
     <Compile Include="SimpleTestCases\StringAsIConvertible.cs" />
     <Compile Include="SimpleTests.cs" />
     <None Include="SimpleTestCases\BaseAutoProperties.cs" />
@@ -330,7 +331,6 @@
     <None Include="SimpleTestCases\EnumerableCast.cs" />
     <None Include="SimpleTestCases\EnumerableToList.cs" />
     <None Include="SimpleTestCases\Issue176.cs" />
-    <None Include="SimpleTestCases\Issue118_1.fs" />
     <None Include="SimpleTestCases\EnumerableElementAt.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <None Include="SimpleTestCases\AutoProperties.cs" />
