@@ -88,6 +88,34 @@
     }
   );
 
+  $.Method({Static:true , Public:true }, "op_GreaterThan", 
+    (new JSIL.MethodSignature($.Boolean, [$.Type, $.Type], [])),
+    function (lhs, rhs) {
+      return decimalToNumber(lhs) > decimalToNumber(rhs);
+    }
+  );
+
+  $.Method({Static:true , Public:true }, "op_LessThan", 
+    (new JSIL.MethodSignature($.Boolean, [$.Type, $.Type], [])),
+    function (lhs, rhs) {
+      return decimalToNumber(lhs) < decimalToNumber(rhs);
+    }
+  );
+
+  $.Method({Static:true , Public:true }, "op_GreaterThanOrEqual", 
+    (new JSIL.MethodSignature($.Boolean, [$.Type, $.Type], [])),
+    function (lhs, rhs) {
+      return decimalToNumber(lhs) >= decimalToNumber(rhs);
+    }
+  );
+  
+  $.Method({Static:true , Public:true }, "op_LessThanOrEqual", 
+    (new JSIL.MethodSignature($.Boolean, [$.Type, $.Type], [])),
+    function (lhs, rhs) {
+      return decimalToNumber(lhs) <= decimalToNumber(rhs);
+    }
+  );
+
   $.Method({ Static: true, Public: true }, "op_Explicit",
     (new JSIL.MethodSignature($.Type, [mscorlib.TypeRef("System.Single")], [])),
     numberToDecimal
