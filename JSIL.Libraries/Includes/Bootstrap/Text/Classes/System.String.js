@@ -36,9 +36,10 @@ JSIL.ImplementExternals(
     $.Method({ Static: false, Public: true }, ".ctor",
       new JSIL.MethodSignature(null, ["System.Char", "System.Int32"], [], $jsilcore),
       function (ch, length) {
+        var symbol = String.fromCharCode(ch);
         var arr = new Array(length);
         for (var i = 0; i < length; i++)
-          arr[i] = ch;
+          arr[i] = symbol;
 
         return new String(arr.join(""));
       }
@@ -163,7 +164,7 @@ JSIL.ImplementExternals(
       function (str, chars, startIndex) {
         var result = null;
         for (var i = startIndex || 0; i < chars.length; i++) {
-          var index = str.indexOf(chars[i]);
+          var index = str.indexOf(String.fromCharCode(chars[i]));
           if ((result === null) || (index < result))
             result = index;
         }
@@ -210,7 +211,7 @@ JSIL.ImplementExternals(
       function (str, chars) {
         var result = null;
         for (var i = 0; i < chars.length; i++) {
-          var index = str.lastIndexOf(chars[i]);
+          var index = str.lastIndexOf(String.fromCharCode(chars[i]));
           if ((result === null) || (index > result))
             result = index;
         }
@@ -259,7 +260,7 @@ JSIL.ImplementExternals(
         if (extraChars <= 0)
           return str;
 
-        return makePadding(ch, extraChars) + str;
+        return makePadding(String.fromCharCode(ch), extraChars) + str;
       }
     );
 
@@ -270,7 +271,7 @@ JSIL.ImplementExternals(
         if (extraChars <= 0)
           return str;
 
-        return str + makePadding(ch, extraChars);
+        return str + makePadding(String.fromCharCode(ch), extraChars);
       }
     );
 
@@ -279,7 +280,7 @@ JSIL.ImplementExternals(
       function (str, sourceIndex, destination, destinationIndex, count) {
         if (count > 0) {
           for (var i = 0; i < count; i++)
-            destination[destinationIndex + i] = str[sourceIndex + i];
+            destination[destinationIndex + i] = str.charCodeAt(sourceIndex + i);
         }
       }
     );
@@ -290,10 +291,18 @@ JSIL.ImplementExternals(
         return this.length;
       }
     );
+
+    $.Method({ Static: true, Public: false }, "UseRandomizedHashing",
+      new JSIL.MethodSignature($.Boolean, [], []),
+      function() {
+        return false;
+      }
+    );
   }
 );
 
 JSIL.MakeClass("System.Object", "System.String", true, [], function ($) {
   $.Field({ Static: true, Public: true }, "Empty", $.String, "");
   $.Property({ Public: true, Static: false }, "Length");
+  JSIL.MakeIConvertibleMethods($);
 });

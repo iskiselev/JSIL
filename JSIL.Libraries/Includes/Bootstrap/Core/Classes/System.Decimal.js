@@ -88,6 +88,34 @@
     }
   );
 
+  $.Method({Static:true , Public:true }, "op_GreaterThan", 
+    (new JSIL.MethodSignature($.Boolean, [$.Type, $.Type], [])),
+    function (lhs, rhs) {
+      return decimalToNumber(lhs) > decimalToNumber(rhs);
+    }
+  );
+
+  $.Method({Static:true , Public:true }, "op_LessThan", 
+    (new JSIL.MethodSignature($.Boolean, [$.Type, $.Type], [])),
+    function (lhs, rhs) {
+      return decimalToNumber(lhs) < decimalToNumber(rhs);
+    }
+  );
+
+  $.Method({Static:true , Public:true }, "op_GreaterThanOrEqual", 
+    (new JSIL.MethodSignature($.Boolean, [$.Type, $.Type], [])),
+    function (lhs, rhs) {
+      return decimalToNumber(lhs) >= decimalToNumber(rhs);
+    }
+  );
+  
+  $.Method({Static:true , Public:true }, "op_LessThanOrEqual", 
+    (new JSIL.MethodSignature($.Boolean, [$.Type, $.Type], [])),
+    function (lhs, rhs) {
+      return decimalToNumber(lhs) <= decimalToNumber(rhs);
+    }
+  );
+
   $.Method({ Static: true, Public: true }, "op_Explicit",
     (new JSIL.MethodSignature($.Type, [mscorlib.TypeRef("System.Single")], [])),
     numberToDecimal
@@ -105,6 +133,11 @@
 
   $.Method({ Static: true, Public: true }, "op_Explicit",
     (new JSIL.MethodSignature(mscorlib.TypeRef("System.SByte"), [$.Type], [])),
+    decimalToNumber
+  );
+
+  $.Method({ Static: true, Public: true }, "op_Explicit",
+    (new JSIL.MethodSignature(mscorlib.TypeRef("System.Char"), [$.Type], [])),
     decimalToNumber
   );
 
@@ -143,33 +176,34 @@
     decimalToNumber
   );
 
-
-  $.Method({ Static: true, Public: true }, "op_GreaterThan",
-    (new JSIL.MethodSignature($.Boolean, [$.Type, $.Type], [])),
-    function (lhs, rhs) {
-      return decimalToNumber(lhs) > decimalToNumber(rhs);
-    }
+  $.Method({ Static: true, Public: true }, "op_Explicit",
+    (new JSIL.MethodSignature(mscorlib.TypeRef("System.Double"), [$.Type], [])),
+    decimalToNumber
   );
 
-  $.Method({ Static: true, Public: true }, "op_LessThan",
-    (new JSIL.MethodSignature($.Boolean, [$.Type, $.Type], [])),
-    function (lhs, rhs) {
-      return decimalToNumber(lhs) < decimalToNumber(rhs);
-    }
+  $.Method({ Static: true, Public: true }, "op_Implicit",
+    (new JSIL.MethodSignature($.Type, [mscorlib.TypeRef("System.Byte")], [])),
+    numberToDecimal
   );
 
-  $.Method({ Static: true, Public: true }, "op_GreaterThanOrEqual",
-    (new JSIL.MethodSignature($.Boolean, [$.Type, $.Type], [])),
-    function (lhs, rhs) {
-      return decimalToNumber(lhs) >= decimalToNumber(rhs);
-    }
+  $.Method({ Static: true, Public: true }, "op_Implicit",
+    (new JSIL.MethodSignature($.Type, [mscorlib.TypeRef("System.SByte")], [])),
+    numberToDecimal
   );
 
-  $.Method({ Static: true, Public: true }, "op_LessThanOrEqual",
-    (new JSIL.MethodSignature($.Boolean, [$.Type, $.Type], [])),
-    function (lhs, rhs) {
-      return decimalToNumber(lhs) <= decimalToNumber(rhs);
-    }
+  $.Method({ Static: true, Public: true }, "op_Implicit",
+    (new JSIL.MethodSignature($.Type, [mscorlib.TypeRef("System.Char")], [])),
+    numberToDecimal
+  );
+
+  $.Method({ Static: true, Public: true }, "op_Implicit",
+    (new JSIL.MethodSignature($.Type, [mscorlib.TypeRef("System.Int16")], [])),
+    numberToDecimal
+  );
+
+  $.Method({ Static: true, Public: true }, "op_Implicit",
+    (new JSIL.MethodSignature($.Type, [mscorlib.TypeRef("System.UInt16")], [])),
+    numberToDecimal
   );
 
   $.Method({ Static: true, Public: true }, "op_Implicit",
@@ -177,20 +211,42 @@
     numberToDecimal
   );
 
+  $.Method({ Static: true, Public: true }, "op_Implicit",
+    (new JSIL.MethodSignature($.Type, [mscorlib.TypeRef("System.UInt32")], [])),
+    numberToDecimal
+  );
+
+  $.Method({ Static: true, Public: true }, "op_Implicit",
+    (new JSIL.MethodSignature($.Type, [mscorlib.TypeRef("System.Int64")], [])),
+    numberToDecimal
+  );
+
+  $.Method({ Static: true, Public: true }, "op_Implicit",
+    (new JSIL.MethodSignature($.Type, [mscorlib.TypeRef("System.UInt64")], [])),
+    numberToDecimal
+  );
+
+  $.Field({ Public: true, Static: true }, "Zero", $.Type, function () { return new $jsilcore.System.Decimal(0); });
+  $.Field({ Public: true, Static: true }, "One", $.Type, function () { return new $jsilcore.System.Decimal(1); });
+  $.Field({ Public: true, Static: true }, "MinusOne", $.Type, function () { return new $jsilcore.System.Decimal(-1); });
+
   $.Field({ Static: false, Public: false }, "value", mscorlib.TypeRef("System.Double"), function () {
     return 0;
   });
 
-  $.Method({ Static: false, Public: true }, "ToDouble",
-    (new JSIL.MethodSignature($.Double, [mscorlib.TypeRef("System.IFormatProvider")], [])),
-    function (formatProvider) { return decimalToNumber(this); }
-  ).Overrides("System.IConvertible", "ToDouble");
+  var $formatSignature = function () {
+    return ($formatSignature = JSIL.Memoize(new JSIL.MethodSignature($jsilcore.TypeRef("System.String"), [
+        $jsilcore.TypeRef("System.String"), $jsilcore.TypeRef("System.Double"),
+        $jsilcore.TypeRef("System.IFormatProvider")
+    ])))();
+  };
 
-  JSIL.MakeCastMethods(
-    $.publicInterface, $.typeObject, "decimal"
+  $.RawMethod(
+    true, "$ToString",
+    function $ToString(self, format, formatProvider) {
+      return $formatSignature().CallStatic($jsilcore.JSIL.System.NumberFormatter, "NumberToString", null, format, decimalToNumber(self), formatProvider).toString();
+    }
   );
 
-  $.ImplementInterfaces(
-      $jsilcore.TypeRef("System.IConvertible")
-    );
+  JSIL.MakeIConvertibleMethods($);
 });

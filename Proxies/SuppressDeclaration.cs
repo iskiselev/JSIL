@@ -25,7 +25,10 @@
             typeof (Assembly),
             typeof (Decimal),
             typeof (IntPtr), typeof (UIntPtr),
-            typeof (NumberFormatInfo)
+            typeof (NumberFormatInfo),
+            typeof (Convert), typeof(DBNull),
+            typeof (IConvertible),
+            typeof (string)
         },
         inheritable: false)]
     [JSSuppressTypeDeclaration]
@@ -44,6 +47,7 @@
             "System.Reflection.RuntimePropertyInfo",
             "System.Reflection.RuntimeEventInfo",
             "System.Reflection.RuntimeParameterInfo",
+            "System.Empty"
         },
         inheritable: false)]
     [JSSuppressTypeDeclaration]

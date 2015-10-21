@@ -2042,7 +2042,7 @@ JSIL.MakeProto = function (baseType, typeObject, typeName, isReferenceType, asse
   return prototype;
 };
 
-JSIL.MakeNumericType = function (baseType, typeName, isIntegral, typedArrayName) {
+JSIL.MakeNumericType = function (baseType, typeName, isIntegral, typedArrayName, declareAdditionalMembers) {
   var typeArgs = {
     BaseType: baseType,
     Name: typeName,
@@ -2124,8 +2124,11 @@ JSIL.MakeNumericType = function (baseType, typeName, isIntegral, typedArrayName)
         return $formatSignature().CallStatic($jsilcore.JSIL.System.NumberFormatter, "NumberToString", null, format, self, formatProvider).toString();
       }
     );
+    
     JSIL.MakeBoxMethod($);
-
+    
+    if (declareAdditionalMembers)
+      declareAdditionalMembers($);
   });
 };
 
@@ -5799,7 +5802,7 @@ JSIL.MakeStruct = function (baseType, fullName, isPublic, genericArguments, init
   return JSIL.MakeType(typeArgs, initializer);
 };
 
-JSIL.MakeInterface = function (fullName, isPublic, genericArguments, initializer, interfaces) {
+JSIL.MakeInterface = function (fullName, isPublic, genericArguments, initializer, interfaces, checkMethod, interfaceMemberFallbackMethod) {
   var assembly = $private;
   var localName = JSIL.GetLocalName(fullName);
 
@@ -5850,7 +5853,7 @@ JSIL.MakeInterface = function (fullName, isPublic, genericArguments, initializer
     typeObject.__Attributes__ = attributes;
     typeObject.__Interfaces__ = interfaces || [];
 
-    var interfaceBuilder = new JSIL.InterfaceBuilder(assembly, typeObject, publicInterface, "interface");
+    var interfaceBuilder = new JSIL.InterfaceBuilder(assembly, typeObject, publicInterface, "interface", interfaceMemberFallbackMethod);
     initializer(interfaceBuilder);
 
     if (typeObject.__GenericArguments__.length > 0) {
@@ -5866,6 +5869,10 @@ JSIL.MakeInterface = function (fullName, isPublic, genericArguments, initializer
     typeObject._IsAssignableFrom = function (typeOfValue) {
       return typeOfValue.__AssignableTypes__[this.__TypeId__] === true;
     };
+
+    if (checkMethod || false) {
+      JSIL.SetValueProperty(publicInterface, "CheckType", checkMethod);
+    }
 
     JSIL.MakeCastMethods(publicInterface, typeObject, "interface");
 
@@ -6520,10 +6527,11 @@ JSIL.MemberBuilder.prototype.Parameter = function (index, name, attributes) {
 };
 
 
-JSIL.InterfaceBuilder = function (context, typeObject, publicInterface, builderMode) {
+JSIL.InterfaceBuilder = function (context, typeObject, publicInterface, builderMode, interfaceMemberFallbackMethod) {
   this.context = context;
   this.typeObject = typeObject;
   this.publicInterface = publicInterface;
+  this.interfaceMemberFallbackMethod = interfaceMemberFallbackMethod || null;
 
   if (Object.getPrototypeOf(typeObject) === Object.prototype) {
     // HACK: Handle the fact that ImplementExternals doesn't pass us a real type object.
@@ -7195,7 +7203,7 @@ JSIL.InterfaceBuilder.prototype.Method = function (_descriptor, methodName, sign
   var memberBuilder = new JSIL.MemberBuilder(this.context);
 
   if (this.typeObject.IsInterface) {
-    var methodObject = new JSIL.InterfaceMethod(this.typeObject, descriptor.EscapedName, signature, memberBuilder.parameterInfo);
+    var methodObject = new JSIL.InterfaceMethod(this.typeObject, descriptor.EscapedName, signature, memberBuilder.parameterInfo, this.interfaceMemberFallbackMethod);
 
     JSIL.SetValueProperty(descriptor.Target, mangledName, methodObject);
 
@@ -8352,7 +8360,7 @@ JSIL.ResolvedMethodSignature.prototype.toString = function () {
 };
 
 
-JSIL.InterfaceMethod = function (typeObject, methodName, signature, parameterInfo) {
+JSIL.InterfaceMethod = function (typeObject, methodName, signature, parameterInfo, interfaceMemberFallbackMethod) {
   this.typeObject = typeObject;
   this.variantGenericArguments = JSIL.$FindVariantGenericArguments(typeObject);
   this.methodName = methodName;
@@ -8368,7 +8376,11 @@ JSIL.InterfaceMethod = function (typeObject, methodName, signature, parameterInf
   this.parameterInfo = parameterInfo;
   this.qualifiedName = JSIL.$GetSignaturePrefixForType(typeObject) + this.methodName;
   this.variantInvocationCandidateCache = JSIL.CreateDictionaryObject(null);
-  this.fallbackMethod = JSIL.$PickFallbackMethodForInterfaceMethod(typeObject, methodName, signature);
+  if (interfaceMemberFallbackMethod !== null) {
+    this.fallbackMethod = interfaceMemberFallbackMethod;
+  } else {
+    this.fallbackMethod = JSIL.$PickFallbackMethodForInterfaceMethod(typeObject, methodName, signature);
+  }
 
   JSIL.SetLazyValueProperty(this, "methodKey", function () {
     return this.signature.GetNamedKey(this.qualifiedName, true);
@@ -9274,9 +9286,7 @@ JSIL.StructEquals = function Struct_Equals (lhs, rhs) {
 
 JSIL.DefaultValueInternal = function (typeObject, typePublicInterface) {
   var fullName = typeObject.__FullName__;
-  if (fullName === "System.Char") {
-    return "\0";
-  } else if (fullName === "System.Boolean") {
+  if (fullName === "System.Boolean") {
     return false;
   } else if (typeObject.__IsReferenceType__) {
     return null;
@@ -9639,7 +9649,7 @@ JSIL.StringToCharArray = function (text) {
   var result = JSIL.Array.New(System.Char, text.length);
 
   for (var i = 0, l = text.length; i < l; i++)
-    result[i] = text[i];
+    result[i] = text.charCodeAt(i);
 
   return result;
 };
@@ -10799,14 +10809,15 @@ JSIL.$FormatStringImpl = function (format, values) {
 
     if (alignment || valueFormat) {
       return JSIL.NumberToFormattedString(value.valueOf(), alignment, valueFormat);
-
     } else {
-
-      if (JSIL.GetType(value) === $jsilcore.System.Boolean.__Type__) {
+      var type = JSIL.GetType(value);
+      if (type === $jsilcore.System.Boolean.__Type__) {
         if (value.valueOf())
           return "True";
         else
           return "False";
+      } else if (type === $jsilcore.System.Char.__Type__) {
+        return String.fromCharCode(value.valueOf());
       } else if (value === null) {
         return "";
       } else {
