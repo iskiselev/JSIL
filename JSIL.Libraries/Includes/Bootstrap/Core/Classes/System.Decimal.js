@@ -248,5 +248,16 @@
     }
   );
 
+  $jsilcore.$MakeParseExternals($, $.Type,
+    function(text, style) {
+      return new $jsilcore.System.Decimal($jsilcore.$ParseFloat(text, style));
+    }, function (text, style, result) {
+      var r = $jsilcore.$TryParseFloat(text, style, result);
+      if (r) {
+        result.set(new $jsilcore.System.Decimal(result.get()));
+      }
+      return r;
+    });
+
   JSIL.MakeIConvertibleMethods($);
 });
