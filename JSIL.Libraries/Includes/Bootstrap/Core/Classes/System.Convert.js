@@ -2,35 +2,6 @@
 //? include("../Utils/$jsilcore.$ParseFloat.js");
 //? include("../Utils/$jsilcore.$ParseBoolean.js");
 JSIL.ImplementExternals("System.Convert", function ($) {
-  var numToDecimalAdapter = function (adapter) {
-    if (!adapter)
-      JSIL.RuntimeError("No adapter provided");
-
-    return function (value) {
-      return new System.Decimal(adapter(value));
-    }
-  }
-
-      else if ($jsilcore.System.IConvertible.$Is(value)) {
-        var conversionMethod = $jsilcore.System.IConvertible["To" + typeName];
-
-        if (conversionMethod) {
-          return conversionMethod.Call(value, null, null);
-        }
-      }
-      else if (to === $.String) {
-        return value.toString();
-      }
-  });
-
-  makeConvertMethods("Decimal", $jsilcore.TypeRef("System.Decimal"), {
-    boolean: numToDecimalAdapter(boolToInt),
-    uint: numToDecimalAdapter(returnSame),
-    int: numToDecimalAdapter(returnSame),
-    float: numToDecimalAdapter(returnSame),
-    int64: numToDecimalAdapter(returnValueOf),
-    uint64: numToDecimalAdapter(returnValueOf),
-    string: numToDecimalAdapter($jsilcore.$ParseFloat)
   var base64IgnoredCodepoints = [
     9, 10, 13, 32
   ];
