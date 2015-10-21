@@ -109,6 +109,11 @@
   );
 
   $.Method({ Static: true, Public: true }, "op_Explicit",
+    (new JSIL.MethodSignature(mscorlib.TypeRef("System.Char"), [$.Type], [])),
+    decimalToNumber
+  );
+
+  $.Method({ Static: true, Public: true }, "op_Explicit",
     (new JSIL.MethodSignature(mscorlib.TypeRef("System.Int16"), [$.Type], [])),
     decimalToNumber
   );
@@ -147,6 +152,55 @@
     (new JSIL.MethodSignature(mscorlib.TypeRef("System.Double"), [$.Type], [])),
     decimalToNumber
   );
+
+  $.Method({ Static: true, Public: true }, "op_Implicit",
+    (new JSIL.MethodSignature($.Type, [mscorlib.TypeRef("System.Byte")], [])),
+    numberToDecimal
+  );
+
+  $.Method({ Static: true, Public: true }, "op_Implicit",
+    (new JSIL.MethodSignature($.Type, [mscorlib.TypeRef("System.SByte")], [])),
+    numberToDecimal
+  );
+
+  $.Method({ Static: true, Public: true }, "op_Implicit",
+    (new JSIL.MethodSignature($.Type, [mscorlib.TypeRef("System.Char")], [])),
+    numberToDecimal
+  );
+
+  $.Method({ Static: true, Public: true }, "op_Implicit",
+    (new JSIL.MethodSignature($.Type, [mscorlib.TypeRef("System.Int16")], [])),
+    numberToDecimal
+  );
+
+  $.Method({ Static: true, Public: true }, "op_Implicit",
+    (new JSIL.MethodSignature($.Type, [mscorlib.TypeRef("System.UInt16")], [])),
+    numberToDecimal
+  );
+
+  $.Method({ Static: true, Public: true }, "op_Implicit",
+    (new JSIL.MethodSignature($.Type, [mscorlib.TypeRef("System.Int32")], [])),
+    numberToDecimal
+  );
+
+  $.Method({ Static: true, Public: true }, "op_Implicit",
+    (new JSIL.MethodSignature($.Type, [mscorlib.TypeRef("System.UInt32")], [])),
+    numberToDecimal
+  );
+
+  $.Method({ Static: true, Public: true }, "op_Implicit",
+    (new JSIL.MethodSignature($.Type, [mscorlib.TypeRef("System.Int64")], [])),
+    numberToDecimal
+  );
+
+  $.Method({ Static: true, Public: true }, "op_Implicit",
+    (new JSIL.MethodSignature($.Type, [mscorlib.TypeRef("System.UInt64")], [])),
+    numberToDecimal
+  );
+
+  $.Field({ Public: true, Static: true }, "Zero", $.Type, function () { return new $jsilcore.System.Decimal(0); });
+  $.Field({ Public: true, Static: true }, "One", $.Type, function () { return new $jsilcore.System.Decimal(1); });
+  $.Field({ Public: true, Static: true }, "MinusOne", $.Type, function () { return new $jsilcore.System.Decimal(-1); });
 
   $.Field({ Static: false, Public: false }, "value", mscorlib.TypeRef("System.Double"), function () {
     return 0;
