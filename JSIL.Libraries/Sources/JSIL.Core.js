@@ -5058,8 +5058,13 @@ JSIL.$ActuallyMakeCastMethods = function (publicInterface, typeObject, specialTy
   var integerCastFunction = function Cast_Integer (expression) {
     if (typeof (expression) === "number") {
       var max = publicInterface.MaxValue | 0;
-      var result = (expression | 0) & max;
+      var min = publicInterface.MinValue | 0;
+      var result = 0;
 
+      if (min == 0 || expression >= 0)
+        result = (expression | 0) & max;
+      else
+        result = ~(~(expression | 0) & ~min);
       return result;
     } else if (expression === false) {
       return 0;
