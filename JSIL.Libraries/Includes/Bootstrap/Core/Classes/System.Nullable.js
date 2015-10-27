@@ -14,18 +14,35 @@
 });
 
 JSIL.ImplementExternals("System.Nullable`1", function ($) {
+});
+
+//? if ('GENERATE_STUBS' in  __out) {
+JSIL.MakeStaticClass("System.Nullable", true, [], function ($) {
+});
+//? }
+
+JSIL.MakeStruct("System.ValueType", "System.Nullable`1", true, ["T"], function ($) {
   $.RawMethod(true, "CheckType", function (value) {
     if (this.T.$Is(value))
       return true;
 
     return false;
   });
-});
 
-//? if ('GENERATE_STUBS' in  __out) {
-JSIL.MakeStaticClass("System.Nullable", true, [], function ($) {
-});
+  $.Method({ Static: false, Public: true }, "get_HasValue",
+    JSIL.MethodSignature.Return($.Boolean),
+    function () {
+      return this !== null;
+    }
+  );
 
-JSIL.MakeStruct("System.ValueType", "System.Nullable`1", true, ["T"], function ($) {
+  $.Method({ Static: false, Public: true }, "get_Value",
+    new JSIL.MethodSignature($.GenericParameter("T"), null),
+    function () {
+      return JSIL.Nullable_Value(this);
+    }
+  );
+
+  $.Property({ Static: false, Public: true }, "Value", $.GenericParameter("T"));
+  $.Property({ Static: false, Public: true }, "HasValue", $.Boolean);
 });
-//? }
