@@ -211,6 +211,7 @@
     <None Include="SimpleTestCases\IsGenericParameter.cs" />
     <None Include="SimpleTestCases\GetInterfaces.cs" />
     <None Include="SimpleTestCases\IsInterface.cs" />
+    <None Include="SimpleTestCases\UInt64UnariNegation_Issue882.cs" />
     <None Include="SimpleTestCases\CanWriteOrRead.cs" />
     <None Include="SimpleTestCases\IsByRef.cs" />
     <None Include="SimpleTestCases\ListRemoveReturnValue.cs" />

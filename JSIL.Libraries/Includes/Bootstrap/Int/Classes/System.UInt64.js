@@ -31,6 +31,13 @@ JSIL.ImplementExternals("System.UInt64", function ($) {
     var tempDiv = mktemp();
 
     // Not present in mscorlib
+    $.Method({ Static: true, Public: true }, "op_UnaryNegation",
+    (new JSIL.MethodSignature($jsilcore.TypeRef("System.Int64"), [$.Type], [])),
+    function Int64_op_UnaryNegation(a) {
+      return $jsilcore.System.Int64.op_UnaryNegation(a.ToInt64());
+    });
+
+    // Not present in mscorlib
     $.Method({ Static: true, Public: true }, "op_Division",
     (new JSIL.MethodSignature($.Type, [$.Type, $.Type], [])),
     function UInt64_op_Division(n, d, result) {
