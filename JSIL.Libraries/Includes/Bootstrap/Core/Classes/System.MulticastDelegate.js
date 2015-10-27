@@ -29,6 +29,7 @@ JSIL.MulticastDelegate.New = function (delegates) {
   JSIL.SetValueProperty(resultDelegate, "toString", delegatesCopy[0].toString);
   JSIL.SetValueProperty(resultDelegate, "__method__", resultDelegate);
   JSIL.SetValueProperty(resultDelegate, "Invoke", resultDelegate);
+  JSIL.SetValueProperty(resultDelegate, "DynamicInvoke", $jsilcore.System.Delegate.prototype.DynamicInvoke);
   JSIL.SetValueProperty(resultDelegate, "get_Method", function () { return delegatesCopy[delegateCount - 1].get_Method(); });
 
   return resultDelegate;

@@ -9597,6 +9597,7 @@ JSIL.MakeDelegate = function (fullName, isPublic, genericArguments, methodSignat
       JSIL.SetValueProperty(resultDelegate, "__method__", method);
       JSIL.SetValueProperty(resultDelegate, "__isMulticast__", false);
       JSIL.SetValueProperty(resultDelegate, "Invoke", method);
+      JSIL.SetValueProperty(resultDelegate, "DynamicInvoke", $jsilcore.System.Delegate.prototype.DynamicInvoke);
       JSIL.SetValueProperty(resultDelegate, "get_Method", this.__Type__.__PublicInterface__.prototype.get_Method);
       JSIL.SetValueProperty(resultDelegate, "__methodInfoResolver__", methodInfoResolver);
 

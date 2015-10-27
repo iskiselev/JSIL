@@ -163,6 +163,13 @@ JSIL.ImplementExternals("System.Delegate", function ($) {
     $jsilcore.$RemoveDelegate
   );
 
+  $.Method({ Static: false, Public: true, Virtual: true }, "DynamicInvoke",
+    (new JSIL.MethodSignature($.Object, [$jsilcore.TypeRef("System.Array", [$.Object])], [])),
+      function DynamicInvoke(args) {
+        return this.Invoke.apply(this, args);
+      }
+  );
+
   $.Method({ Static: false, Public: true }, "get_Method",
     (new JSIL.MethodSignature.Return($jsilcore.TypeRef("System.Reflection.MethodInfo"))),
     function get_Method() {
