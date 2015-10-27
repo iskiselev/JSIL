@@ -172,32 +172,52 @@ namespace JSIL {
                     if ((methodInfo == null) || methodInfo.IsIgnored)
                         continue;
 
-                    Formatter.Identifier("$", EscapingMode.None);
-                    Formatter.Dot();
-                    Formatter.Identifier("Method", EscapingMode.None);
-                    Formatter.LPar();
+                    astEmitter.ReferenceContext.Push();
+                    astEmitter.ReferenceContext.DefiningMethod = methodInfo.Member;
 
-                    var renamedName = methodInfo.Name;
-                    var offset = renamedName.IndexOf("`");
-                    if (offset > 0)
-                        renamedName = renamedName.Substring(0, offset);
+                    try
+                    {
+                        Formatter.Identifier("$", EscapingMode.None);
+                        Formatter.Dot();
+                        Formatter.Identifier("Method", EscapingMode.None);
+                        Formatter.LPar();
 
-                    if (renamedName != m.Name) {
-                        Formatter.WriteRaw("{OriginalName: ");
-                        Formatter.Value(m.Name);
-                        Formatter.WriteRaw("}");
-                    } else {
-                        Formatter.WriteRaw("{}");
+                        var renamedName = methodInfo.Name;
+                        var offset = renamedName.IndexOf("`");
+                        if (offset > 0)
+                            renamedName = renamedName.Substring(0, offset);
+
+                        if (renamedName != m.Name)
+                        {
+                            Formatter.WriteRaw("{OriginalName: ");
+                            Formatter.Value(m.Name);
+                            Formatter.WriteRaw("}");
+                        }
+                        else
+                        {
+                            Formatter.WriteRaw("{}");
+                        }
+                        Formatter.Comma();
+
+                        Formatter.Value(Util.EscapeIdentifier(renamedName, EscapingMode.String));
+                        Formatter.Comma();
+
+                        Formatter.MethodSignature(m, methodInfo.Signature, refContext);
+
+                        Formatter.RPar();
+
+                        astEmitter.ReferenceContext.AttributesMethod = methodInfo.Member;
+
+                        EmitCustomAttributes(context, methodInfo.Member.DeclaringType, methodInfo.Member, astEmitter);
+
+                        EmitParameterAttributes(context, methodInfo.Member.DeclaringType, methodInfo.Member, astEmitter);
+
+                        Formatter.Semicolon(true);
                     }
-                    Formatter.Comma();
-
-                    Formatter.Value(Util.EscapeIdentifier(renamedName, EscapingMode.String));
-                    Formatter.Comma();
-
-                    Formatter.MethodSignature(m, methodInfo.Signature, refContext);
-
-                    Formatter.RPar();
-                    Formatter.Semicolon(true);
+                    finally
+                    {
+                        astEmitter.ReferenceContext.Pop();
+                    }
                 }
             }
 
