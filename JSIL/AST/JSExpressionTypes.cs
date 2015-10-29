@@ -839,6 +839,35 @@ namespace JSIL.Ast {
         }
     }
 
+    public class JSMethodPointerInfoExpression : JSMethod
+    {
+        public JSMethodPointerInfoExpression(
+            MethodReference reference, MethodInfo method, MethodTypeFactory methodTypes, bool isVirtual,
+            IEnumerable<TypeReference> genericArguments = null)
+            : base(reference, method, methodTypes, genericArguments)
+        {
+            IsVirtual = isVirtual;
+        }
+
+        public override bool HasGlobalStateDependency
+        {
+            get
+            {
+                return false;
+            }
+        }
+
+        public bool IsVirtual { get; private set; }
+
+        public override bool IsConstant
+        {
+            get
+            {
+                return true;
+            }
+        }
+    }
+
     public class JSPublicInterfaceOfExpression : JSExpression {
         public JSPublicInterfaceOfExpression (JSExpression inner)
             : base(inner) {
@@ -3281,23 +3310,6 @@ namespace JSIL.Ast {
 
         public override TypeReference GetActualType (TypeSystem typeSystem) {
             return ResultType;
-        }
-    }
-
-    public class JSDeferredExpression : JSExpression {
-        public JSDeferredExpression(JSExpression innerExpression)
-            : base(new [] { innerExpression})
-        {
-        }
-
-        public JSExpression InnerExpression
-        {
-            get { return (JSExpression)Children.First(); }
-        }
-
-        public override TypeReference GetActualType(TypeSystem typeSystem)
-        {
-            return typeSystem.Object;
         }
     }
 
