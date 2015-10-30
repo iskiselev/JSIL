@@ -3314,24 +3314,22 @@ JSIL.GetObjectKeys = function (obj) {
 };
 
 JSIL.CreateNamedFunction = function (name, argumentNames, body, closure) {
-  var result = null, keys = null, closureArgumentList = null;
+  var result = null, keys = null, closureArgumentList = null, closureArgumenNames = null;
 
   if (closure) {
-    keys = JSIL.GetObjectKeys(closure);
-    closureArgumentList = new Array(keys.length);
-
-    for (var i = 0, l = keys.length; i < l; i++)
-      closureArgumentList[i] = closure[keys[i]];
+    closureArgumenNames = JSIL.GetObjectKeys(closure);
+    closureArgumentList = new Array(closureArgumenNames.length);
+    for (var i = 0, l = closureArgumenNames.length; i < l; i++)
+      closureArgumentList[i] = closure[closureArgumenNames[i]];
   }
 
-  var constructor = JSIL.CreateRebindableNamedFunction(name, argumentNames, body, closure);
+  var constructor = JSIL.CreateRebindableNamedFunction(name, argumentNames, body, closureArgumenNames);
   result = constructor.apply(null, closureArgumentList);
 
   return result;
 };
 
-JSIL.CreateRebindableNamedFunction = function (name, argumentNames, body, closure) {
-  var uriRe = /[\<\>\+\/\\\.]/g;
+JSIL.CreateRebindableNamedFunction = function (name, argumentNames, body, closureArgNames) {
   var strictPrefix = "\"use strict\";\r\n";
   var uriPrefix = "", escapedFunctionIdentifier = "";
 
@@ -3357,8 +3355,8 @@ JSIL.CreateRebindableNamedFunction = function (name, argumentNames, body, closur
 
   var result = null, keys = null;
 
-  if (closure) {
-    keys = JSIL.GetObjectKeys(closure).concat([rawFunctionText]);
+  if (closureArgNames) {
+    keys = closureArgNames.concat([rawFunctionText]);
   } else {
     keys = [rawFunctionText];
   }
@@ -10874,7 +10872,7 @@ JSIL.MethodPointerInfo = function(typeObject, name, signature, isStatic, isVirtu
   this.NameWithGenericSuffix = useGenericSuffix ? (name + "$b" + this.MethodGenericParameters.length) : name;
 }
 
-JSIL.MethodInfoMethodPointerInfo = function(methodInfo) {
+JSIL.MethodPointerInfo.FromMethodInfo = function (methodInfo) {
   var signature = methodInfo._data.signature;
   var genericArgs = null;
   if (JSIL.IsArray(signature.genericArgumentValues)) {
@@ -10882,7 +10880,7 @@ JSIL.MethodInfoMethodPointerInfo = function(methodInfo) {
     signature = signature.openSignature;
   }
 
-  JSIL.MethodPointerInfo.call(this,
+  var methodPointerInfo = new JSIL.MethodPointerInfo(
     methodInfo._typeObject.__PublicInterface__,
     methodInfo._descriptor.Name,
     signature,
@@ -10890,11 +10888,10 @@ JSIL.MethodInfoMethodPointerInfo = function(methodInfo) {
     methodInfo._descriptor.Virtual,
     genericArgs);
 
-  this.MethodInfo = methodInfo;
-  this.MethodInfoResolved = true;
+  methodPointerInfo.MethodInfo = methodInfo;
+  methodPointerInfo.MethodInfoResolved = true;
+  return methodPointerInfo;
 }
-
-JSIL.MethodInfoMethodPointerInfo.prototype = JSIL.MethodPointerInfo.prototype;
 
 JSIL.MethodPointerInfo.prototype.resolveMethodInfo = function () {
   if (!this.MethodInfoResolved) {
@@ -10906,158 +10903,65 @@ JSIL.MethodPointerInfo.prototype.resolveMethodInfo = function () {
 }
 
 JSIL.MethodPointerInfo.prototype.createInvocationFunction = function(thisObject) {
-  var argsCount = JSIL.IsArray(this.Signature.argumentTypes) ? this.Signature.argumentTypes.length : 0;
-
-  if (thisObject === null) {
-    if (this.TypeObject.__Type__.IsInterface) {
-      return JSIL.MethodPointerInfo.$createVirtualInterfaceInvocation(argsCount, false)(this);
-    } else if (this.IsStatic) {
-      return JSIL.MethodPointerInfo.$createStaticInvocation(argsCount, false)(this);
-    } else if (!this.IsVirtual) {
-      return JSIL.MethodPointerInfo.$createInstanceInvocation(argsCount, false)(this);
-    } else if (!this.TypeObject.__Type__.IsInterface) {
-      return JSIL.MethodPointerInfo.$createVirtualInvocation(argsCount, false)(this);
-    }
+  if (this.TypeObject.__Type__.IsInterface) {
+    return JSIL.MethodPointerInfo.$createInvocationMethod("InvokeInterface", this, thisObject);
+  } else if (this.IsStatic) {
+    return JSIL.MethodPointerInfo.$createInvocationMethod("InvokeStatic", this, thisObject);
+  } else if (!this.IsVirtual) {
+    return JSIL.MethodPointerInfo.$createInvocationMethod("InvokeInstance", this, thisObject);
   } else {
-    if (this.TypeObject.__Type__.IsInterface) {
-      return JSIL.MethodPointerInfo.$createVirtualInterfaceInvocation(argsCount, true)(this, thisObject);
-    } else if (this.IsStatic) {
-      return JSIL.MethodPointerInfo.$createStaticInvocation(argsCount, true)(this, thisObject);
-    } else if (!this.IsVirtual) {
-      return JSIL.MethodPointerInfo.$createInstanceInvocation(argsCount, true)(this, thisObject);
-    } else if (!this.TypeObject.__Type__.IsInterface) {
-      return JSIL.MethodPointerInfo.$createVirtualInvocation(argsCount, true)(this, thisObject);
-    }
+    return JSIL.MethodPointerInfo.$createInvocationMethod("InvokeVirtual", this, thisObject);
   }
 }
 
-JSIL.MethodPointerInfo.$createStaticInvocation = function (argsCount, saveThis)
+JSIL.MethodPointerInfo.$invocationStrings =
 {
-  var key = "InvokeStatic" + (saveThis ? "Attached" : "") + argsCount;
+  InvokeStatic: "return methodPointer.Signature.CallStatic(methodPointer.TypeObject, methodPointer.NameWithGenericSuffix, methodPointer.MethodGenericParameters",
+  InvokeInstance: "return methodPointer.Signature.Call(methodPointer.TypeObject.prototype, methodPointer.NameWithGenericSuffix, methodPointer.MethodGenericParameters, thisObject",
+  InvokeVirtual: "return methodPointer.Signature.CallVirtual(methodPointer.NameWithGenericSuffix, methodPointer.MethodGenericParameters, thisObject",
+  InvokeInterface: "return methodPointer.Signature.CallVirtual(methodPointer.TypeObject[methodPointer.NameWithGenericSuffix], methodPointer.MethodGenericParameters, thisObject"
+};
 
-  if (!(key in JSIL.MethodPointerInfo)) {
+JSIL.MethodPointerInfo.$createInvocationMethod = function (key, methodPointerInfo, thisObject) {
+  var argsCount = JSIL.IsArray(methodPointerInfo.Signature.argumentTypes) ? methodPointerInfo.Signature.argumentTypes.length : 0;
+  var saveThis = thisObject !== null;
+  var fullKey = key + (saveThis ? "" : "Detached") + argsCount;
+
+  if (!(fullKey in JSIL.MethodPointerInfo)) {
+    var i = 0;
     var innerArgs = [];
     var innerBody = [];
+    var closureArgs = ["methodPointer"];
 
-    innerBody.push("//# sourceURL=jsil://closure/JSIL.MethodPointerInfo." + key + "\r\n");
-    innerBody.push("\"use strict\";\r\n");
-
-    if (saveThis) {
-      innerBody.push("return methodPointer.Signature.CallStatic(methodPointer.TypeObject, methodPointer.NameWithGenericSuffix, methodPointer.MethodGenericParameters, arg0");
+    innerBody.push(JSIL.MethodPointerInfo.$invocationStrings[key]);
+    if (key === "InvokeStatic") {
+      for (i = 0; i < argsCount; i++) {
+        if (i === 0 && saveThis) {
+          closureArgs.push("arg" + i);
+        } else {
+          innerArgs.push("arg" + i);
+        }
+        innerBody.push(", arg" + i);
+      }
     } else {
-      innerBody.push("return methodPointer.Signature.CallStatic(methodPointer.TypeObject, methodPointer.NameWithGenericSuffix, methodPointer.MethodGenericParameters");
+      if (!saveThis) {
+        innerArgs.push("thisObject");
+      } else {
+        closureArgs.push("thisObject");
+      }
+
+      for (i = 0; i < argsCount; i++) {
+        innerArgs.push("arg" + i);
+        innerBody.push(", arg" + i);
+      }
     }
-    for (var i = (saveThis ? 1 : 0); i < argsCount; i++) {
-      innerArgs.push("arg" + i);
-      innerBody.push(", arg" + i);
-    }
+
     innerBody.push(")");
 
-    var outerBody = "return function "+ key +"(" + innerArgs.join(", ") + ") {" + innerBody.join("") + "};";
-    if (saveThis) {
-      JSIL.MethodPointerInfo[key] = new Function("methodPointer", "arg0", outerBody);
-    } else {
-      JSIL.MethodPointerInfo[key] = new Function("methodPointer", outerBody);
-    }
+    JSIL.MethodPointerInfo[fullKey] = JSIL.CreateRebindableNamedFunction("JSIL.MethodPointerInfo." + fullKey, innerArgs, innerBody.join(""), closureArgs);
   }
 
-  return JSIL.MethodPointerInfo[key];
-}
-
-
-JSIL.MethodPointerInfo.$createInstanceInvocation = function (argsCount, saveThis) {
-  var key = "InvokeInstance" + (saveThis ? "" : "Detached") + argsCount;
-
-  if (!(key in JSIL.MethodPointerInfo)) {
-    var innerArgs = [];
-    var innerBody = [];
-
-    innerBody.push("//# sourceURL=jsil://closure/JSIL.MethodPointerInfo." + key + "\r\n");
-    innerBody.push("\"use strict\";\r\n");
-
-    innerBody.push("return methodPointer.Signature.Call(methodPointer.TypeObject.prototype, methodPointer.NameWithGenericSuffix, methodPointer.MethodGenericParameters, thisObject");
-
-    if (!saveThis) {
-      innerArgs.push("thisObject");
-    }
-
-    for (var i = 0; i < argsCount; i++) {
-      innerArgs.push("arg" + i);
-      innerBody.push(", arg" + i);
-    }
-    innerBody.push(")");
-
-    var outerBody = "return function " + key + "(" + innerArgs.join(", ") + ") {" + innerBody.join("") + "};";
-    if (saveThis) {
-      JSIL.MethodPointerInfo[key] = new Function("methodPointer", "thisObject", outerBody);
-    } else {
-      JSIL.MethodPointerInfo[key] = new Function("methodPointer", outerBody);
-    }
-  }
-
-  return JSIL.MethodPointerInfo[key];
-}
-
-JSIL.MethodPointerInfo.$createVirtualInvocation = function (argsCount, saveThis) {
-  var key = "InvokeVirtual" + (saveThis ? "" : "Detached") + argsCount;
-
-  if (!(key in JSIL.MethodPointerInfo)) {
-    var innerArgs = [];
-    var innerBody = [];
-
-    innerBody.push("//# sourceURL=jsil://closure/JSIL.MethodPointerInfo." + key + "\r\n");
-    innerBody.push("\"use strict\";\r\n");
-
-    innerBody.push("return methodPointer.Signature.CallVirtual(methodPointer.NameWithGenericSuffix, methodPointer.MethodGenericParameters, thisObject");
-    if (!saveThis) {
-      innerArgs.push("thisObject");
-    }
-    for (var i = 0; i < argsCount; i++) {
-      innerArgs.push("arg" + i);
-      innerBody.push(", arg" + i);
-    }
-    innerBody.push(")");
-
-    var outerBody = "return function " + key + "(" + innerArgs.join(", ") + ") {" + innerBody.join("") + "};";
-    if (saveThis) {
-      JSIL.MethodPointerInfo[key] = new Function("methodPointer", "thisObject", outerBody);
-    } else {
-      JSIL.MethodPointerInfo[key] = new Function("methodPointer", outerBody);
-    }
-  }
-
-  return JSIL.MethodPointerInfo[key];
-}
-
-JSIL.MethodPointerInfo.$createVirtualInterfaceInvocation = function (argsCount, saveThis) {
-  var key = "InvokeVirtualInterface" + (saveThis ? "" : "Detached") + argsCount;
-
-  if (!(key in JSIL.MethodPointerInfo)) {
-    var innerArgs = [];
-    var innerBody = [];
-
-    innerBody.push("//# sourceURL=jsil://closure/JSIL.MethodPointerInfo." + key + "\r\n");
-    innerBody.push("\"use strict\";\r\n");
-
-    innerBody.push("return methodPointer.Signature.CallVirtual(methodPointer.TypeObject[methodPointer.NameWithGenericSuffix], methodPointer.MethodGenericParameters, thisObject");
-    if (!saveThis) {
-      innerArgs.push("thisObject");
-    }
-    for (var i = 0; i < argsCount; i++) {
-      innerArgs.push("arg" + i);
-      innerBody.push(", arg" + i);
-    }
-    innerBody.push(")");
-
-    var outerBody = "return function " + key + "(" + innerArgs.join(", ") + ") {" + innerBody.join("") + "};";
-    if (saveThis) {
-      JSIL.MethodPointerInfo[key] = new Function("methodPointer", "thisObject", outerBody);
-    } else {
-      JSIL.MethodPointerInfo[key] = new Function("methodPointer", outerBody);
-    }
-  }
-
-  return JSIL.MethodPointerInfo[key];
+  return JSIL.MethodPointerInfo[fullKey](methodPointerInfo, thisObject);
 }
 
 
