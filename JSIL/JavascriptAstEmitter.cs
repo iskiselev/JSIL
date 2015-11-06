@@ -1228,7 +1228,7 @@ namespace JSIL {
 
         public void VisitNode(JSMethodOfExpression moe)
         {
-            var methodName = Util.EscapeIdentifier(moe.Method.GetName(true), EscapingMode.MemberIdentifier);
+            var methodName = Util.EscapeIdentifier(moe.Method.GetName(true), EscapingMode.None);
 
             Output.WriteRaw("JSIL.GetMethodInfo");
             Output.LPar();
@@ -1264,7 +1264,7 @@ namespace JSIL {
 
         public void VisitNode(JSMethodPointerInfoExpression moe)
         {
-            var methodName = Util.EscapeIdentifier(moe.Method.GetName(true), EscapingMode.MemberIdentifier);
+            var methodName = Util.EscapeIdentifier(moe.Method.GetName(true), EscapingMode.None);
 
             Output.WriteRaw("new JSIL.MethodPointerInfo");
             Output.LPar();
@@ -1302,7 +1302,7 @@ namespace JSIL {
 
         public void VisitNode(JSFieldOfExpression moe)
         {
-            var fieldName = Util.EscapeIdentifier(moe.Field.ChangedName ?? moe.Field.Name, EscapingMode.MemberIdentifier);
+            var fieldName = Util.EscapeIdentifier(moe.Field.ChangedName ?? moe.Field.Name, EscapingMode.None);
 
             Output.WriteRaw("JSIL.GetFieldInfo");
             Output.LPar();
