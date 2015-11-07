@@ -10751,7 +10751,7 @@ JSIL.MethodPointerInfo = function(typeObject, name, signature, isStatic, isVirtu
 
   var useGenericSuffix = this.MethodGenericParameters !== null && this.MethodGenericParameters.length > 0;
 
-  this.NameWithGenericSuffix = useGenericSuffix ? (name + "$b" + this.MethodGenericParameters.length) : name;
+  this.NameWithGenericSuffix = useGenericSuffix ? (JSIL.EscapeName(name) + "$b" + this.MethodGenericParameters.length) : JSIL.EscapeName(name);
 }
 
 JSIL.MethodPointerInfo.FromMethodInfo = function (methodInfo) {
