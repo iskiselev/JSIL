@@ -9,6 +9,24 @@
     var eventArray = new JSIL.TypeRef($jsilcore, "System.Array", ["System.Reflection.EventInfo"]);
     var typeArray = new JSIL.TypeRef($jsilcore, "System.Array", ["System.Type"]);
 
+
+    $.Method({ Public: true, Static: false, Virtual: true }, "Equals",
+      new JSIL.MethodSignature($.Boolean, [$.Type]),
+      function (other) {
+        if (this === other)
+          return true;
+
+        return String(this) == String(other);
+      }
+    );
+
+    $.Method({ Public: true, Static: false, Virtual: true }, "MakeArrayType",
+      new JSIL.MethodSignature($.Type, []),
+      function() {
+        return $jsilcore.System.Array.Of(this).__Type__;
+      }
+    );
+
     $.Method({ Public: true, Static: true }, "op_Equality",
       new JSIL.MethodSignature($.Boolean, [$.Type, $.Type]),
       function (lhs, rhs) {
