@@ -31,7 +31,7 @@
             typeof (Convert), typeof(DBNull),
             typeof (IConvertible),
             typeof (string),
-            typeof(Nullable<>)
+            typeof (Nullable<>),
             typeof (Enum),
             typeof (IEnumerable<>),
             typeof (ICollection<>),

@@ -299,20 +299,6 @@ JSIL.ImplementExternals(
       }
     );
 
-    $.Method({ Static: false, Public: true }, "get_Length",
-      new JSIL.MethodSignature($.Int32, [], []),
-      function() {
-        return this.length;
-      }
-    );
-
-    $.Method({ Static: true, Public: false }, "UseRandomizedHashing",
-      new JSIL.MethodSignature($.Boolean, [], []),
-      function() {
-        return false;
-      }
-    );
-
     $.Method({ Static: false, Public: false }, null,
         new JSIL.MethodSignature($jsilcore.TypeRef("System.Collections.IEnumerator"), [], []),
         function() {

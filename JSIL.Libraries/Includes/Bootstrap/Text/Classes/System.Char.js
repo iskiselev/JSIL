@@ -33,15 +33,6 @@ JSIL.ImplementExternals("System.Char", function ($) {
     }
   );
 
-  $.Method({ Static: true, Public: true }, "IsNumber",
-    new JSIL.MethodSignature($.Boolean, [$.Char], []),
-    function IsNumeric(c) {
-      // FIXME: Unicode
-      var charCode = c.charCodeAt(0);
-      return (charCode >= 48) && (charCode <= 57);
-    }
-  );
-
   $.Method({ Static: true, Public: true }, "IsLetterOrDigit",
     new JSIL.MethodSignature($.Boolean, [$.Char], []),
     function IsLetterOrDigit(c) {
@@ -85,7 +76,7 @@ JSIL.ImplementExternals("System.Char", function ($) {
   $.Method({ Static: true, Public: true }, "ToString",
     new JSIL.MethodSignature($.String, [$.Char], []),
     function ToString(c) {
-      return c;
+      return String.fromCharCode(c);
     }
   );
 });
