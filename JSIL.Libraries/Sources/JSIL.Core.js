@@ -10914,7 +10914,7 @@ JSIL.MethodPointerInfo.FromMethodInfo = function (methodInfo) {
 JSIL.MethodPointerInfo.prototype.resolveMethodInfo = function () {
   if (!this.MethodInfoResolved) {
     this.MethodInfoResolved = true;
-    this.MethodInfo = JSIL.GetMethodInfo(this.TypeObject, this.Name, this.Signature, this.IsStatic, this.MethodGenericParameters);
+    this.MethodInfo = JSIL.GetMethodInfo(this.TypeObject, JSIL.EscapeName(this.Name), this.Signature, this.IsStatic, this.MethodGenericParameters);
   }
 
   return this.MethodInfo;
