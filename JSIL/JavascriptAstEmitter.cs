@@ -1262,6 +1262,43 @@ namespace JSIL {
 
         public void VisitNode(JSMethodPointerInfoExpression moe)
         {
+            var methodName = Util.EscapeIdentifier(moe.Method.GetName(true), EscapingMode.MemberIdentifier);
+
+            Output.WriteRaw("new JSIL.MethodPointerInfo");
+            Output.LPar();
+
+            Output.Identifier(
+                moe.Reference.DeclaringType, ReferenceContext, IncludeTypeParens.Peek()
+            );
+            Output.Comma();
+
+            Output.WriteRaw("\"");
+            Output.Identifier(methodName);
+            Output.WriteRaw("\"");
+            Output.Comma();
+
+            SignatureCacher.WriteSignatureToOutput(
+                Output, Stack.OfType<JSFunctionExpression>().FirstOrDefault(),
+                moe.Reference, moe.Method.Signature, ReferenceContext, false
+            );
+            Output.Comma();
+
+            Output.Value(moe.Method.IsStatic);
+            Output.Comma();
+            Output.Value(moe.IsVirtual);
+
+            if (moe.GenericArguments != null && moe.GenericArguments.Any())
+            {
+                Output.Comma();
+                Output.OpenBracket();
+                Output.CommaSeparatedList(moe.GenericArguments, ReferenceContext);
+                Output.CloseBracket();
+            }
+
+            Output.RPar();
+        }
+
+        {
             Output.WriteRaw("new JSIL.MethodPointerInfo");
             Output.LPar();
 
@@ -2086,8 +2123,9 @@ namespace JSIL {
 
             if (newarray.Dimensions != null) {
                 Output.Comma();
-
+                Output.OpenBracket();
                 CommaSeparatedList(newarray.Dimensions, false);
+                Output.CloseBracket();
             }
 
             if (newarray.SizeOrArrayInitializer != null) {

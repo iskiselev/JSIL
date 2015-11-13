@@ -1,6 +1,8 @@
 ﻿namespace JSIL.Proxies
 {
     using System;
+    using System.Collections;
+    using System.Collections.Generic;
     using System.Globalization;
     using System.Reflection;
     using JSIL.Meta;
@@ -30,6 +32,13 @@
             typeof (IConvertible),
             typeof (string),
             typeof(Nullable<>)
+            typeof (Enum),
+            typeof (IEnumerable<>),
+            typeof (ICollection<>),
+            typeof (IList<>),
+            typeof (IEnumerable),
+            typeof (ICollection),
+            typeof (IList),
         },
         inheritable: false)]
     [JSSuppressTypeDeclaration]

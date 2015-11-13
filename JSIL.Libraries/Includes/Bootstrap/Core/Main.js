@@ -24,7 +24,6 @@ JSIL.DeclareNamespace("System.Runtime.InteropServices");
 
 //? include("Classes/JSIL.ArrayEnumerator.js"); writeln();
 //? include("Classes/JSIL.StringEnumerator.js"); writeln();
-//? include("Classes/JSIL.ArrayInterfaceOverlay.js"); writeln();
 
 //? include("Classes/System.Boolean.js"); writeln();
 //? include("Classes/System.Char.js"); writeln();
