@@ -497,14 +497,14 @@ JSIL.GetAssembly = function (assemblyName, requireExisting) {
 
   // Ensure that BCL private namespaces inherit from the JSIL namespace.
   if (isMscorlib || isSystem || isSystemCore || isSystemXml || isJsilMeta)
-    template = $jsilcore;
+    template = $jsilcore || {};
 
   var result = JSIL.CreateSingletonObject(template);
 
   var assemblyId;
 
   // Terrible hack to assign the mscorlib and JSIL.Core types the same IDs
-  if (isMscorlib) {
+  if (isMscorlib && $jsilcore) {
     assemblyId = $jsilcore.__AssemblyId__;
   } else {
     assemblyId = ++JSIL.$NextAssemblyId;
@@ -543,7 +543,7 @@ JSIL.GetAssembly = function (assemblyName, requireExisting) {
 };
 
 
-var $jsilcore = JSIL.DeclareAssembly("JSIL.Core");
+var $jsilcore = JSIL.DeclareAssembly("mscorlib");
 
 (function () {
   JSIL.$SpecialTypePrototypes["System.RuntimeType"].__ThisTypeId__ = 
@@ -5042,16 +5042,7 @@ JSIL.$ActuallyMakeCastMethods = function (publicInterface, typeObject, specialTy
   var isInterface = typeObject.IsInterface || false;
 
   // HACK: Handle casting arrays to IEnumerable by creating an overlay.
-  if (isIEnumerable || isICollection || isIList) {
-    checkMethod = function Check_ArrayInterface (value) {
-      // FIXME: IEnumerable<int>.Is(float[]) will return true.
-      if (JSIL.IsArray(value))
-        return true;
-
-      // Fallback to default check logic
-      return false;
-    };
-  } else if (isPointer) {
+  if (isPointer) {
     var expectedElementTypeId = typeObject.__GenericArgumentValues__[0].__TypeId__;
 
     checkMethod = function Check_IsPointer (value) {
@@ -5069,7 +5060,7 @@ JSIL.$ActuallyMakeCastMethods = function (publicInterface, typeObject, specialTy
     isFunction = JSIL.CreateNamedFunction(
       typeName + ".$Is", 
       ["expression", "bypassCustomCheckMethod"],
-      "if (!bypassCustomCheckMethod && checkMethod(expression))\r\n" +
+      "if (!bypassCustomCheckMethod && checkMethod(expression,typePublicInterface))\r\n" +
       "  return true;\r\n" +
       "if (expression) {\r\n" +
       "  var expressionTypeId = expression.__IsBox__ ? expression.TValue.__TypeId__ : expression.__ThisTypeId__;\r\n" +
@@ -5079,7 +5070,8 @@ JSIL.$ActuallyMakeCastMethods = function (publicInterface, typeObject, specialTy
       {
         typeId: typeId,
         assignableFromTypes: assignableFromTypes, 
-        checkMethod: checkMethod
+        checkMethod: checkMethod,
+        typePublicInterface: publicInterface
       }
     );
   } else {
@@ -5102,7 +5094,7 @@ JSIL.$ActuallyMakeCastMethods = function (publicInterface, typeObject, specialTy
     asFunction = JSIL.CreateNamedFunction(
       typeName + ".$As", 
       ["expression"],
-      "if (checkMethod(expression))\r\n" +
+      "if (checkMethod(expression,typePublicInterface))\r\n" +
       "  return expression;\r\n" +
       "else if (expression) {\r\n" +
       "  var expressionTypeId = expression.__IsBox__ ? expression.TValue.__TypeId__ : expression.__ThisTypeId__;\r\n" +
@@ -5113,7 +5105,8 @@ JSIL.$ActuallyMakeCastMethods = function (publicInterface, typeObject, specialTy
       {
         typeId: typeId,
         assignableFromTypes: assignableFromTypes, 
-        checkMethod: checkMethod
+        checkMethod: checkMethod,
+        typePublicInterface: publicInterface
       }
     );
   } else {
@@ -5286,30 +5279,6 @@ JSIL.$ActuallyMakeCastMethods = function (publicInterface, typeObject, specialTy
 
       break;
 
-    case "array":
-      // Allow casting array interface overlays back to appropriate array types
-      isFunction = function Is_Array(expression) {
-        var type = JSIL.GetType(expression);
-        return type === typeObject ||
-          (type.__IsArray__
-          && typeObject.__Dimensions__ === type.__Dimensions__
-          && type.__ElementType__.__IsReferenceType__
-          && typeObject.__ElementType__.__AssignableFromTypes__[type.__ElementType__.__TypeId__]);
-      };
-
-      asFunction = function As_Array(expression) {
-        return isFunction(expression) ? expression : null;
-      };
-
-      castFunction = function CastArray (expression) {
-        if (isFunction(expression))
-          return expression;
-
-        throwCastError(expression);
-      };
-
-      break;
-
     case "char":
       customCheckOnly = true;
       asFunction = throwInvalidAsError;
@@ -5369,21 +5338,6 @@ JSIL.$ActuallyMakeCastMethods = function (publicInterface, typeObject, specialTy
     };
   }
 
-  if (isIEnumerable || isICollection || isIList) {
-    var innerAsFunction = asFunction;
-    var innerCastFunction = castFunction;
-
-    asFunction = function As_ArrayInterface (value) {
-      // FIXME: I think the order of these function calls should be reversed.
-      return innerAsFunction(value);
-    };
-
-    castFunction = function Cast_ArrayInterface (value) {
-      // FIXME: I think the order of these function calls should be reversed.
-      return innerCastFunction(value);
-    };
-  }
-
   if (isInterface) {
     var wrappedFunctions = JSIL.WrapCastMethodsForInterfaceVariance(typeObject, isFunction, asFunction);
     isFunction = wrappedFunctions.is;
@@ -5395,6 +5349,14 @@ JSIL.$ActuallyMakeCastMethods = function (publicInterface, typeObject, specialTy
     As: asFunction,
     Is: isFunction
   }
+};
+
+JSIL.$TypeAssignableFromExpression = function (expression, typePublicInterface) {
+  return expression !== null && JSIL.$TypeAssignableFromTypeId(JSIL.GetType(expression).__TypeId__, typePublicInterface);
+};
+
+JSIL.$TypeAssignableFromTypeId = function(expressionTypeId, typePublicInterface) {
+  return (expressionTypeId === typePublicInterface.__TypeId__) || (!!typePublicInterface.__Type__.__AssignableFromTypes__[expressionTypeId]);
 };
 
 JSIL.MakeCastMethods = function (publicInterface, typeObject, specialType) {
@@ -5791,8 +5753,7 @@ JSIL.MakeType = function (typeArgs, initializer) {
     JSIL.ApplyExternals(staticClassObject, typeObject, fullName);
 
     var isNullable = fullName === "System.Nullable`1";
-    var isArray = staticClassObject.prototype.__IsArray__ || false;
-    JSIL.MakeCastMethods(staticClassObject, typeObject, isNullable ? "nullable" : (isArray ? "array" : null));
+    JSIL.MakeCastMethods(staticClassObject, typeObject, isNullable ? "nullable" : null);
 
     delete $jsilcore.InFlightObjectConstructions[fullName];
 
@@ -8383,7 +8344,7 @@ JSIL.ResolvedMethodSignature = function (methodSignature, key, returnType, argum
 
 JSIL.ResolvedMethodSignature.prototype.ResolvePositionalGenericParameters = function (genericParameterValues) {
   var context = {};
-  for (var k = 0, m = this.argumentTypes.length; k < m; k++) {
+  for (var k = 0, m = genericParameterValues.length; k < m; k++) {
     context["!!" + k] = genericParameterValues[k];
   }
 
@@ -9177,9 +9138,9 @@ JSIL.GetReflectionCache = function (typeObject) {
 // Scans the specified type (and its base types, as necessary) to retrieve all the MemberInfo instances appropriate for a request.
 // If any BindingFlags are specified in flags they are applied as filters to limit the number of members returned.
 // If memberType is specified and is the short name of a MemberInfo subclass like 'FieldInfo', only members of that type are returned.
-JSIL.GetMembersInternal = function (typeObject, flags, memberType, name, hideMembers) {
+JSIL.GetMembersInternal = function (typeObject, flags, memberType, name, hideMembers, resultArrayType) {
   hideMembers |= false;
-  var result = [];
+  var result = resultArrayType ? JSIL.Array.New(resultArrayType.__ElementType__, 0) : [];
   var bindingFlags = $jsilcore.BindingFlags;
 
   var allMethodsIncludingSpecialNames = (memberType === "$AllMethods");
@@ -9894,7 +9855,7 @@ JSIL.GetMemberAttributes = function (memberInfo, inherit, attributeType, result)
 
   if (inherit) {
     if (!result)
-      result = [];
+      result = JSIL.Array.New($jsilcore.System.Attribute, 0);
 
     if (memberType === "System.RuntimeType") {
       var currentType = memberInfo;
@@ -9932,7 +9893,7 @@ JSIL.GetMemberAttributes = function (memberInfo, inherit, attributeType, result)
   }
 
   if (!result)
-    result = [];
+    result = JSIL.Array.New($jsilcore.System.Attribute, 0);
 
   for (var i = 0, l = attributes.length; i < l; i++) {
     var attribute = attributes[i];
@@ -10207,14 +10168,14 @@ JSIL.$EnumBasesOfType = function (typeObject, resultList) {
   }
 };
 
-JSIL.GetInterfacesImplementedByType = function (typeObject, walkInterfaceBases, allowDuplicates, includeDistance) {
+JSIL.GetInterfacesImplementedByType = function (typeObject, walkInterfaceBases, allowDuplicates, includeDistance, resultArrayType) {
   // FIXME: Memoize the result of this function?
 
   if (arguments.length < 3)
     JSIL.RuntimeError("3 arguments expected");
 
   var typeAndBases = JSIL.GetTypeAndBases(typeObject);
-  var result = [];
+  var result = resultArrayType ? JSIL.Array.New(resultArrayType.__ElementType__, 0) : [];
   var distanceList = [];
 
   // Walk in reverse to match the behavior of JSIL.Internal.TypeInfo.AllInterfacesRecursive
@@ -10323,6 +10284,11 @@ JSIL.$FindMatchingInterfacesThroughVariance = function (expectedInterfaceObject,
       var lhs = expectedInterfaceObject.__GenericArgumentValues__[vp.index];
       var rhs = iface.__GenericArgumentValues__[vp.index];
 
+      if (!lhs.__IsReferenceType__ || !rhs.__IsReferenceType__) {
+        ifaceResult = false;
+        break;
+      }
+
       var parameterResult = true;
       var foundIndex = -1;
 
@@ -10335,8 +10301,9 @@ JSIL.$FindMatchingInterfacesThroughVariance = function (expectedInterfaceObject,
           foundIndex = typeAndBasesLhs.indexOf(rhs);
         }
 
-        if (foundIndex < 0)
+        if (foundIndex < 0) {
           ifaceResult = parameterResult = false;
+        }
       } 
 
       if (vp.out) {
@@ -10409,7 +10376,10 @@ JSIL.WrapCastMethodsForInterfaceVariance = function (typeObject, isFunction, asF
     return result;
   }
 
-  result.is = function Is_VariantInterface (value) {
+  result.is = function Is_VariantInterface(value) {
+    if (value === null)
+      return false;
+
     var result = isFunction(value);
 
     if (trace)
@@ -10424,7 +10394,10 @@ JSIL.WrapCastMethodsForInterfaceVariance = function (typeObject, isFunction, asF
     return result;
   };
 
-  result.as = function As_VariantInterface (value) {
+  result.as = function As_VariantInterface(value) {
+    if (value === null)
+      return null;
+
     var result = asFunction(value);
 
     if (trace && !result)
