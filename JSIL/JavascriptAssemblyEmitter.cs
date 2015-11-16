@@ -222,6 +222,9 @@ namespace JSIL {
             }
 
             foreach (var p in iface.Properties) {
+                if (Translator.ShouldSkipMember(p))
+                    continue;
+
                 var propertyInfo = TypeInfo.GetProperty(p);
                 if ((propertyInfo != null) && propertyInfo.IsIgnored)
                     continue;
@@ -251,6 +254,10 @@ namespace JSIL {
 
             Formatter.OpenBracket();
             foreach (var i in iface.Interfaces) {
+                if (Translator.ShouldSkipMember(i))
+                {
+                    continue;
+                }
                 if (!isFirst) {
                     Formatter.Comma();
                 }
