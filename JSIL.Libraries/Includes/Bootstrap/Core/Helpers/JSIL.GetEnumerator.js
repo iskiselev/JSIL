@@ -45,6 +45,8 @@ JSIL.GetEnumerator = function (enumerable, elementType, fallbackMethodInvoke) {
   var result = null;
   if (JSIL.IsArray(enumerable))
     result = JSIL.MakeArrayEnumerator(enumerable, elementType);
+  else if (enumerable.__IsArray__)
+    result = JSIL.MakeArrayEnumerator(enumerable.Items, elementType);
   else if (typeof (enumerable) === "string")
     result = JSIL.MakeStringEnumerator(enumerable, elementType);
   else if ((fallbackMethodInvoke !== true) && tIEnumerable$b1 && tIEnumerable$b1.$Is(enumerable))
