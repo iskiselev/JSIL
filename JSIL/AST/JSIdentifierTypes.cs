@@ -239,8 +239,9 @@ namespace JSIL.Ast {
 
         // FIXME: Is this right?
         public override bool IsConstant {
-            get {
-                return true;
+            get
+            {
+                return Field.IsImmutable;
             }
         }
     }
