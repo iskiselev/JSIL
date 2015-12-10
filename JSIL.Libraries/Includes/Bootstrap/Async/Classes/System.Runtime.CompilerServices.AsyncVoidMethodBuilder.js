@@ -2,13 +2,18 @@ JSIL.ImplementExternals("System.Runtime.CompilerServices.AsyncVoidMethodBuilder"
   $.Method({ Static: false, Public: false }, ".ctor",
     (new JSIL.MethodSignature(null, [], [])),
     function _ctor() {
+      this.ParentTask = JSIL.$ParentTask;
+      this.InitStack = JSIL.$TaskGetStack();
     }
   );
 
   $.Method({ Static: true, Public: true }, "Create",
     (new JSIL.MethodSignature($jsilcore.TypeRef("System.Runtime.CompilerServices.AsyncVoidMethodBuilder"), [], [])),
     function Create() {
-      return new $jsilcore.System.Runtime.CompilerServices.AsyncVoidMethodBuilder();
+      var t = new $jsilcore.System.Runtime.CompilerServices.AsyncVoidMethodBuilder();
+      t.ParentTask = JSIL.$ParentTask;
+      t.InitStack = JSIL.$TaskGetStack();
+      return t;
     }
   );
 
@@ -35,7 +40,15 @@ JSIL.ImplementExternals("System.Runtime.CompilerServices.AsyncVoidMethodBuilder"
   $.Method({ Static: false, Public: true }, "Start",
     new JSIL.MethodSignature(null, [$jsilcore.TypeRef("JSIL.Reference", ["!!0"])], ["TStateMachine"]),
     function AwaitOnCompleted(TStateMachine, stateMachine) {
-      stateMachine.get().MoveNext();
+      this.ParentTask = JSIL.$ParentTask;
+      this.InitStack = JSIL.$TaskGetStack();
+      JSIL.$ParentTask = this;
+
+      try {
+        stateMachine.get().MoveNext();
+      } finally {
+        JSIL.$ParentTask = this.ParentTask;
+      }
     }
   );
 
@@ -48,7 +61,14 @@ JSIL.ImplementExternals("System.Runtime.CompilerServices.AsyncVoidMethodBuilder"
   $.Method({ Static: false, Public: true }, "SetException",
     new JSIL.MethodSignature(null, [$jsilcore.TypeRef("System.Exception")], []),
     function SetException(exception) {
-      JSIL.Host.warning(exception);
+      var prevParentTask = JSIL.$ParentTask;
+      JSIL.$ParentTask = this;
+
+      try {
+        JSIL.Host.warning(exception);
+      } finally {
+        JSIL.$ParentTask = prevParentTask;
+      }
     }
   );
 });
@@ -93,4 +113,7 @@ JSIL.MakeType({
   $.ExternalMethod({ Static: false, Public: true }, "Start",
     new JSIL.MethodSignature(null, [$jsilcore.TypeRef("JSIL.Reference", ["!!0"])], ["TStateMachine"])
   );
+
+  $.Field({ Static: false, Public: false }, "ParentTask", $.Object);
+  $.Field({ Static: false, Public: false }, "InitStack", $.String);
 });
