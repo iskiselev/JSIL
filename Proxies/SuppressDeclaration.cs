@@ -38,7 +38,7 @@
             typeof (IList<>),
             typeof (IEnumerable),
             typeof (ICollection),
-            typeof (IList),
+            typeof (IList)
         },
         inheritable: false)]
     [JSSuppressTypeDeclaration]
@@ -57,7 +57,13 @@
             "System.Reflection.RuntimePropertyInfo",
             "System.Reflection.RuntimeEventInfo",
             "System.Reflection.RuntimeParameterInfo",
-            "System.Empty"
+            "System.Empty",
+
+            "Microsoft.CSharp.RuntimeBinder.Binder",
+            "Microsoft.CSharp.RuntimeBinder.CSharpArgumentInfo",
+            "System.Runtime.CompilerServices.CallSite",
+            "System.Runtime.CompilerServices.CallSite`1",
+            "System.Runtime.CompilerServices.CallSiteBinder"
         },
         inheritable: false)]
     [JSSuppressTypeDeclaration]
