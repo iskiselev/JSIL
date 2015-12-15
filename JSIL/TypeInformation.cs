@@ -1186,7 +1186,6 @@ namespace JSIL.Internal {
             {
                 if (m2.Success)
                 {
-                            case "__StaticArrayInitTypeSize=":
                     return true;
                 }
             }
