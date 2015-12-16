@@ -5366,7 +5366,8 @@ JSIL.MakeTypeAlias = function (sourceAssembly, fullName) {
     }
   );
 
-  if (sourceAssembly.__AssemblyId__ === context.__AssemblyId__) {
+  // BCL assemblies are created with $jsilcore in prototype  but different __AssemblyId__
+  if (sourceAssembly.__AssemblyId__ === context.__AssemblyId__ || sourceAssembly.isPrototypeOf(context)) {
     // HACK: This is a recursive type alias, so don't define the name alias.
     // We still want to leave the typesByName logic above intact since the two aliases have separate assembly
     //  objects, and thus separate typesByName lists, despite sharing an assembly id.
@@ -9430,15 +9431,10 @@ JSIL.Array.Clone = function(array) {
         bounds.push(array.LowerBounds[i]);
         bounds.push(array.DimensionLength[i]);
       }
-      return JSIL.MultidimensionalArray.New(array.__ElementType__, bounds, array.Items);
+      return JSIL.MultidimensionalArray.New(type.__ElementType__, bounds, array.Items);
     } else {
-      return JSIL.Array.New(array.__ElementType__, array);
+      return JSIL.Array.New(type.__ElementType__, array);
     }
-  } else if (JSIL.IsTypedArray(array)) {
-    var ctor = Object.getPrototypeOf(array).constructor;
-    return new ctor(array);
-  } else if (JSIL.IsArray(array)) {
-    return Array.prototype.slice.call(array);
   } else {
     JSIL.RuntimeError("Invalid array");
   }
