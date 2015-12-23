@@ -758,6 +758,8 @@ namespace JSIL {
         }
 
         public void EmitTypeAlias (TypeDefinition typedef) {
+            Formatter.DeclareNamespace(typedef.Namespace);
+
             Formatter.WriteRaw("JSIL.MakeTypeAlias");
             Formatter.LPar();
 
