@@ -16,6 +16,7 @@ using Mono.Cecil;
 using Mono.Cecil.Cil;
 
 using TypeInfo = JSIL.Internal.TypeInfo;
+using SequencePoint = Mono.Cecil.Cil.SequencePoint;
 
 namespace JSIL {
     public class ILBlockTranslator {
