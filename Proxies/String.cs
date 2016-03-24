@@ -99,7 +99,13 @@ namespace JSIL.Proxies {
             throw new NotImplementedException();
         }
 
-        [JSReplacement("$this.length")]
+        [JSIsPure]
+        [JSReplacement("JSIL.JoinEnumerable($separator, $values)")]
+        public static string Join (string separator, IEnumerable<string> values) {
+            throw new NotImplementedException();
+        }
+
+        [JSChangeName("length")]
         [JSAlwaysAccessAsProperty]
         [JSNeverReplace]
         abstract public int Length { get; }
