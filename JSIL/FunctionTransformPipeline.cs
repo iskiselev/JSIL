@@ -193,6 +193,8 @@ namespace JSIL.Internal {
         }
 
         private void FillPipeline () {
+            Enqueue(AttachSymbolInfoToStatements);
+
             Enqueue(BuildLabelGroups);
 
             Enqueue(IntroduceVariableDeclarationsAndReferences);
@@ -265,6 +267,9 @@ namespace JSIL.Internal {
 
             // HACK: Something about nullables is broken so we have to do this twice. WTF?
             Enqueue(ReplaceMethodCalls);
+
+            Enqueue(AttachSymbolInfoToStatements);
+            Enqueue(FixSymbolInfo);
         }
 
 
@@ -279,6 +284,30 @@ namespace JSIL.Internal {
                     TypeSystem, TypeInfoProvider, FunctionSource,
                     Configuration.CodeGenerator.DecomposeAllMutationOperators.GetValueOrDefault(false)
                 ).Visit(Function);
+            }
+
+            return true;
+        }
+
+        private bool AttachSymbolInfoToStatements()
+        {
+            if (
+                Configuration.BuildSourceMap.GetValueOrDefault(false)
+            )
+            {
+                new AttachSymbolInfoToStatements().Visit(Function);
+            }
+
+            return true;
+        }
+
+        private bool FixSymbolInfo()
+        {
+            if (
+                Configuration.BuildSourceMap.GetValueOrDefault(false)
+            )
+            {
+                new FixSymbolInfo().Visit(Function);
             }
 
             return true;
