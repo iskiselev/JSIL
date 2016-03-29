@@ -18,17 +18,17 @@ namespace JSIL.Proxies {
             return base.ToString();
         }
 
-        [JSReplacement("$typeof(this).__PublicInterface__.$$ToString($this, $format, null)")]
+        [JSReplacement("$etypeof(this).__PublicInterface__.$$ToString($this, $format, null)")]
         public string ToString (string format) {
             throw new InvalidOperationException();
         }
 
-        [JSReplacement("$typeof(this).__PublicInterface__.$$ToString($this, $format, $formatProvider)")]
+        [JSReplacement("$etypeof(this).__PublicInterface__.$$ToString($this, $format, $formatProvider)")]
         public string ToString (string format, IFormatProvider formatProvider) {
             throw new InvalidOperationException();
         }
 
-        [JSReplacement("$typeof(this).__PublicInterface__.$$ToString($this, null, $formatProvider)")]
+        [JSReplacement("$etypeof(this).__PublicInterface__.$$ToString($this, null, $formatProvider)")]
         public string ToString(IFormatProvider formatProvider)
         {
             throw new InvalidOperationException();
@@ -58,17 +58,17 @@ namespace JSIL.Proxies {
             throw new InvalidOperationException();
         }
 
-        [JSReplacement("$typeof(this).__PublicInterface__.$$ToString($this, $format, null)")]
+        [JSReplacement("$etypeof(this).__PublicInterface__.$$ToString($this, $format, null)")]
         public string ToString (string format) {
             throw new InvalidOperationException();
         }
 
-        [JSReplacement("$typeof(this).__PublicInterface__.$$ToString($this, $format, $formatProvider)")]
+        [JSReplacement("$etypeof(this).__PublicInterface__.$$ToString($this, $format, $formatProvider)")]
         public string ToString (string format, IFormatProvider formatProvider) {
             throw new InvalidOperationException();
         }
 
-        [JSReplacement("$typeof(this).__PublicInterface__.$$ToString($this, null, $formatProvider)")]
+        [JSReplacement("$etypeof(this).__PublicInterface__.$$ToString($this, null, $formatProvider)")]
         public string ToString(IFormatProvider formatProvider)
         {
             throw new InvalidOperationException();
@@ -103,19 +103,19 @@ namespace JSIL.Proxies {
             return base.ToString();
         }
 
-        [JSReplacement("$typeof(this).__PublicInterface__.$$ToString($this, $format, null)")]
+        [JSReplacement("$etypeof(this).__PublicInterface__.$$ToString($this, $format, null)")]
         public string ToString(string format)
         {
             throw new InvalidOperationException();
         }
 
-        [JSReplacement("$typeof(this).__PublicInterface__.$$ToString($this, $format, $formatProvider)")]
+        [JSReplacement("$etypeof(this).__PublicInterface__.$$ToString($this, $format, $formatProvider)")]
         public string ToString(string format, IFormatProvider formatProvider)
         {
             throw new InvalidOperationException();
         }
 
-        [JSReplacement("$typeof(this).__PublicInterface__.$$ToString($this, null, $formatProvider)")]
+        [JSReplacement("$etypeof(this).__PublicInterface__.$$ToString($this, null, $formatProvider)")]
         public string ToString(IFormatProvider formatProvider)
         {
             throw new InvalidOperationException();
