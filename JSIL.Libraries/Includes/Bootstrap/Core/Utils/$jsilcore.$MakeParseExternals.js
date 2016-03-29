@@ -18,6 +18,12 @@ $jsilcore.$MakeParseExternals = function ($, type, parse, tryParse) {
     }
   );
 
+  $.Method({ Static: true, Public: true }, "Parse",
+    (new JSIL.MethodSignature(type, [$.String, $jsilcore.TypeRef("System.Globalization.NumberStyles"), $jsilcore.TypeRef("System.IFormatProvider")], [])),
+     // TODO: Really use fromat provider
+    parse
+  );
+
   $.Method({ Static: true, Public: true }, "TryParse",
     (new JSIL.MethodSignature($.Boolean, [$.String, $jsilcore.TypeRef("JSIL.Reference", [type])], [])),
     tryParse
