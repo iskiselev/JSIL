@@ -66,7 +66,7 @@ JSIL.ImplementExternals("System.Runtime.CompilerServices.AsyncTaskMethodBuilder"
       var prevParentTask = JSIL.$ParentTask;
       JSIL.$ParentTask = this;
       try {
-        return $TaskCompletionSourceOfObject().prototype.TrySetResult.call(this.get_TaskSource(), null);
+        $TaskCompletionSourceOfObject().prototype.TrySetResult.call(this.get_TaskSource(), null);
       } finally {
         JSIL.$ParentTask = prevParentTask;
       }
@@ -81,7 +81,7 @@ JSIL.ImplementExternals("System.Runtime.CompilerServices.AsyncTaskMethodBuilder"
 
       try {
         //JSIL.Host.warning(exception);
-        return $TaskCompletionSourceOfObject().prototype.TrySetResult.call(this.get_TaskSource(), null);
+        $TrySetExceptionSignature().Call($TaskCompletionSourceOfObject().prototype, "TrySetException", null, this.get_TaskSource(), exception);
       } finally {
         JSIL.$ParentTask = prevParentTask;
       }
