@@ -1232,7 +1232,7 @@ namespace JSIL {
                 !Configuration.CodeGenerator.DisableGenericSignaturesLocalCache.GetValueOrDefault(false),
                 Configuration.CodeGenerator.PreferLocalCacheForGenericMethodSignatures.GetValueOrDefault(false),
                 Configuration.CodeGenerator.PreferLocalCacheForGenericInterfaceMethodSignatures.GetValueOrDefault(false),
-                Configuration.CodeGenerator.CacheOneMethodSignaturePerMethod.GetValueOrDefault(true));
+                Configuration.CodeGenerator.CacheOneMethodSignaturePerMethod.GetValueOrDefault(false));
             var baseMethodCacher = new BaseMethodCacher(TypeInfoProvider, typedef);
 
             TypeInfoProvider.GetTypeInformation(typedef);
