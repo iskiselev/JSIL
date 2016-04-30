@@ -10,6 +10,8 @@ using Mono.Cecil;
 using TypeDefinition = Mono.Cecil.TypeDefinition;
 
 namespace JSIL {
+    using JSIL.Transforms;
+
     public static class TypeUtil {
         public static TypeReference GetElementType (TypeReference type, bool throwOnFail) {
             type = StripModifiers(type);
@@ -571,7 +573,7 @@ namespace JSIL {
 
         private static string GetActualScope (TypeReference tr) {
             var result = tr.Scope.Name;
-            if (tr.GetType() == typeof (TypeReference))
+            if (tr.GetType() == typeof (TypeReference) && tr.Module != null)
             {
                 var definition = tr.Resolve();
                 if (definition != null)
@@ -646,6 +648,14 @@ namespace JSIL {
             if ((targetGp != null) || (sourceGp != null)) {
                 if ((targetGp == null) || (sourceGp == null))
                     return false;
+
+                var isTargetGpArg = SignatureCacher.IsTypeArgument(targetGp);
+                var isSourceGpArg = SignatureCacher.IsTypeArgument(targetGp);
+
+                if (isSourceGpArg || isTargetGpArg)
+                {
+                    return isSourceGpArg && isTargetGpArg && targetGp.Name == sourceGp.Name;
+                }
 
                 TypeReference temp;
 
