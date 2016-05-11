@@ -5713,7 +5713,16 @@ JSIL.MakeType = function (typeArgs, initializer) {
       typeObject._IsAssignableFrom = function (typeOfValue) {
         return true;
       };
-    } else {
+    } else if (typeObject.__IsNullable__) {
+      typeObject._IsAssignableFrom = function (typeOfValue) {
+        if (!typeOfValue.__TypeInitialized__ && true) {
+          JSIL.InitializeType(typeOfValue);
+        }
+
+        return typeOfValue.__TypeId__ === this.__PublicInterface__.T.__TypeId__ || typeOfValue.__AssignableTypes__[this.__TypeId__] === true;
+      };
+    }
+    else {
       typeObject._IsAssignableFrom = function (typeOfValue) {
         if (!typeOfValue.__TypeInitialized__ && true) {
           JSIL.InitializeType(typeOfValue);
