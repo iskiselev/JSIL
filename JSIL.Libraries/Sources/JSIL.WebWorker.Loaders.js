@@ -1,13 +1,19 @@
-var assetLoaders = {
-  "Library": function loadLibrary (filename, data, onError, onDoneLoading, state) {
-    var uri = jsilConfig.libraryRoot + filename;
-    importScripts(uri);
-  },
-  "Script": function loadScript (filename, data, onError, onDoneLoading, state) {
-    var uri = jsilConfig.scriptRoot + filename;
-    importScripts(uri);
-  },
-};
+﻿importScripts(jsilConfig.libraryRoot + "JSIL.Browser.Loaders.js")
+JSIL.loadGlobalScript = function(uri, onComplete, dllName) {
+    //setTimeout(function () {
+            try {
+                importScripts(uri);
+                onComplete(true, null);
+            } catch (e) {
+                onComplete(null, e);
+            } 
+     //   },
+     //   0);
+}
 
-function initAssetLoaders () {
+self.initAssetLoaders = function () {
+}
+
+self.getAbsoluteUrl = function (localUrl) {
+    return localUrl;
 };
