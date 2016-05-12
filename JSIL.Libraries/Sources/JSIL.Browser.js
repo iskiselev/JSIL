@@ -1,10 +1,10 @@
-"use strict";
+﻿"use strict";
 
 var currentLogLine = null;
 
 var webglEnabled = false;
 
-var $jsilbrowserstate = window.$jsilbrowserstate = {
+var $jsilbrowserstate = self.$jsilbrowserstate = {
   allFileNames: [],
   allAssetNames: [],
   readOnlyStorage: null,
@@ -62,17 +62,17 @@ JSIL.Browser.CanvasService.prototype.get = function (desiredWidth, desiredHeight
   if (
     (typeof (desiredWidth) !== "undefined") &&
     (typeof (desiredHeight) !== "undefined")
-  )  
+  )
     this.applySize(e, desiredWidth | 0, desiredHeight | 0, true);
-  
+
   return e;
 };
 
 JSIL.Browser.CanvasService.prototype.create = function (desiredWidth, desiredHeight) {
   var e = document.createElement("canvas");
-  
+
   this.applySize(e, desiredWidth | 0, desiredHeight | 0, false);
-  
+
   return e;
 };
 
@@ -126,7 +126,7 @@ JSIL.Browser.RunLaterService.prototype.enqueue = function (callback) {
 
   if (!this.pending) {
     this.pending = true;
-    window.setTimeout(this.boundStep, 0);
+    setTimeout(this.boundStep, 0);
   }
 };
 
@@ -148,11 +148,11 @@ JSIL.Browser.LogService = function () {
 };
 
 JSIL.Browser.LogService.prototype.write = function (text) {
-  var log = document.getElementById("log");
+  var log = !!self.window ? document.getElementById("log") : null;
   if (!log) {
-    if (window.console && window.console.log)
-      window.console.log(text);
-    
+    if (self.console && self.console.log)
+      self.console.log(text);
+
     return;
   }
 
@@ -194,11 +194,11 @@ JSIL.Browser.WarningService = function (stream) {
 
 JSIL.Browser.WarningService.prototype.write = function (text) {
   // Quirky behavior, but we suppress warnings from the log if the console is available.
-  if (window.console && window.console.warn) {
+  if (self.console && self.console.warn) {
     if (typeof (text) === "string")
-      window.console.warn(text.trim());
+      self.console.warn(text.trim());
     else
-      window.console.warn(text);
+      self.console.warn(text);
   } else if (this.stream) {
     this.stream.write(text);
   }
@@ -207,21 +207,21 @@ JSIL.Browser.WarningService.prototype.write = function (text) {
 
 JSIL.Browser.TickSchedulerService = function () {
   var forceSetTimeout = false || 
-    (document.location.search.indexOf("forceSetTimeout") >= 0);
+    (self.document && document.location.search.indexOf("forceSetTimeout") >= 0);
 
-  var requestAnimationFrame = window.requestAnimationFrame ||
-    window.mozRequestAnimationFrame || 
-    window.webkitRequestAnimationFrame ||
-    window.msRequestAnimationFrame ||
-    window.oRequestAnimationFrame;
+  var requestAnimationFrame = self.requestAnimationFrame ||
+    self.mozRequestAnimationFrame ||
+    self.webkitRequestAnimationFrame ||
+    self.msRequestAnimationFrame ||
+    self.oRequestAnimationFrame;
 
   if (requestAnimationFrame && !forceSetTimeout) {
     this.schedule = function (stepCallback) {
-      requestAnimationFrame.call(window, stepCallback);
+        requestAnimationFrame.call(self, stepCallback);
     };
   } else {
     this.schedule = function (stepCallback) {
-      window.setTimeout(stepCallback, 0);
+        self.setTimeout(stepCallback, 0);
     };
   }
 };
@@ -254,7 +254,7 @@ JSIL.Browser.LocalStorageService.prototype.getKeys = function () {
 
 
 JSIL.Browser.WindowService = function (window) {
-  this.window = window;
+  this.window = self;
 };
 
 JSIL.Browser.WindowService.prototype.alert = function () {
@@ -290,15 +290,15 @@ JSIL.Browser.WindowService.prototype.getNavigatorUserAgent = function () {
 };
 
 JSIL.Browser.WindowService.prototype.getNavigatorLanguage = function () {
-  return this.window.navigator.language || 
-    this.window.navigator.userLanguage || 
-    this.window.navigator.systemLanguage || 
+  return this.window.navigator.language ||
+    this.window.navigator.userLanguage ||
+    this.window.navigator.systemLanguage ||
     null;
 };
 
 JSIL.Browser.WindowService.prototype.getPerformanceUsedJSHeapSize = function () {
   if (
-    (typeof (this.window.performance) !== "undefined") && 
+    (typeof (this.window.performance) !== "undefined") &&
     (typeof (this.window.performance.memory) !== "undefined")
   ) {
     return this.window.performance.memory.usedJSHeapSize;
@@ -397,21 +397,25 @@ JSIL.Browser.TraceService.prototype.error = function (text) {
 
 
 (function () {
-  var logSvc = new JSIL.Browser.LogService();
+    var logSvc = new JSIL.Browser.LogService();
 
-  JSIL.Host.registerServices({
-    canvas: new JSIL.Browser.CanvasService(),
-    mouse: new JSIL.Browser.MouseService(),
-    keyboard: new JSIL.Browser.KeyboardService(),
-    pageVisibility: new JSIL.Browser.PageVisibilityService(),
-    runLater: new JSIL.Browser.RunLaterService(),
-    stdout: logSvc,
-    stderr: new JSIL.Browser.WarningService(logSvc),
-    tickScheduler: new JSIL.Browser.TickSchedulerService(),
-    window: new JSIL.Browser.WindowService(window),
-    history: new JSIL.Browser.HistoryService(window.history),
-    trace: new JSIL.Browser.TraceService(window.console)
-  });
+    var services = {
+        canvas: new JSIL.Browser.CanvasService(),
+        mouse: new JSIL.Browser.MouseService(),
+        keyboard: new JSIL.Browser.KeyboardService(),
+        pageVisibility: new JSIL.Browser.PageVisibilityService(),
+        runLater: new JSIL.Browser.RunLaterService(),
+        stdout: logSvc,
+        stderr: new JSIL.Browser.WarningService(logSvc),
+        tickScheduler: new JSIL.Browser.TickSchedulerService(),
+        window: new JSIL.Browser.WindowService(self),
+        trace: new JSIL.Browser.TraceService(self.console)
+    };
+
+    if (self.history)
+        services.history = new JSIL.Browser.HistoryService(window.history);
+
+    JSIL.Host.registerServices(services);
 
   if (typeof (localStorage) !== "undefined")
     JSIL.Host.registerService("localStorage", new JSIL.Browser.LocalStorageService(localStorage));
@@ -432,22 +436,22 @@ JSIL.Host.translateFilename = function (filename) {
   var root = JSIL.Host.getRootDirectory().toLowerCase().replace(slashRe, "/");
   var _fileRoot = jsilConfig.fileRoot.toLowerCase().replace(slashRe, "/");
   var _filename = filename.replace(slashRe, "/").toLowerCase();
-  
+
   while (_filename[0] === "/")
     _filename = _filename.substr(1);
 
   if (_filename.indexOf(root) === 0)
     _filename = _filename.substr(root.length);
-  
+
   while (_filename[0] === "/")
     _filename = _filename.substr(1);
 
   if (_filename.indexOf(_fileRoot) === 0)
     _filename = _filename.substr(_fileRoot.length);
-  
+
   while (_filename[0] === "/")
     _filename = _filename.substr(1);
-  
+
   return _filename;
 }
 JSIL.Host.getImage = function (filename) {
@@ -479,7 +483,7 @@ JSIL.Host.doesAssetExist = function (filename, stripRoot) {
 JSIL.Host.getAsset = function (filename, stripRoot) {
   if (filename === null)
     throw new System.Exception("Filename was null");
-  
+
   if (stripRoot === true) {
     var backslashRe = /\\/g;
 
@@ -591,8 +595,8 @@ function initBrowserHooks () {
 
       evt.preventDefault();
       var keyCode = evt.keyCode;
-      var codes = keyMappings[keyCode] || [keyCode];        
-      
+      var codes = keyMappings[keyCode] || [keyCode];
+
       pressKeys(codes);
     }, true
   );
@@ -603,8 +607,8 @@ function initBrowserHooks () {
         evt.preventDefault();
 
       var keyCode = evt.keyCode;
-      var codes = keyMappings[keyCode] || [keyCode];        
-      
+      var codes = keyMappings[keyCode] || [keyCode];
+
       releaseKeys(codes);
     }, true
   );
@@ -643,7 +647,7 @@ function initBrowserHooks () {
     );
 
     canvas.addEventListener(
-      "mousedown", function (evt) {     
+      "mousedown", function (evt) {
         mapMouseCoords(evt);
 
         var button = evt.button;
@@ -657,7 +661,7 @@ function initBrowserHooks () {
     canvas.addEventListener(
       "mouseup", function (evt) {
         mapMouseCoords(evt);
-        
+
         var button = evt.button;
         $jsilbrowserstate.heldButtons = $jsilbrowserstate.heldButtons.filter(function (element, index, array) {
           (element !== button);
@@ -697,7 +701,7 @@ function initBrowserHooks () {
 function getAssetName (filename, preserveCase) {
   var backslashRe = /\\/g;
   filename = filename.replace(backslashRe, "/");
-  
+
   var doubleSlashRe = /\/\//g;
   while (filename.indexOf("//") >= 0)
     filename = filename.replace(doubleSlashRe, "/");
@@ -726,10 +730,10 @@ function updateProgressBar (prefix, suffix, bytesLoaded, bytesTotal) {
   if (jsilConfig.updateProgressBar)
     return jsilConfig.updateProgressBar(prefix, suffix, bytesLoaded, bytesTotal);
 
-  var loadingProgress = document.getElementById("loadingProgress");
-  var progressBar = document.getElementById("progressBar");
-  var progressText = document.getElementById("progressText");
-  
+  var loadingProgress = !!self.window ? document.getElementById("loadingProgress") : null;
+  var progressBar = !!self.window ? document.getElementById("progressBar") : null;
+  var progressText = !!self.window ? document.getElementById("progressText") : null;
+
   var w = 0;
   if (loadingProgress) {
     w = (bytesLoaded * loadingProgress.clientWidth) / (bytesTotal);
@@ -844,7 +848,7 @@ function finishLoading () {
 
         // Ensure that we initialize the JSIL runtime before constructing asset objects.
         if (
-          (item[0] != "Script") && 
+          (item[0] != "Script") &&
           (item[0] != "Library") &&
           (item[0] != "NativeLibrary")
         ) {
@@ -878,17 +882,17 @@ function finishLoading () {
 
       var allFailures = $jsilloaderstate.loadFailures.concat(state.assetLoadFailures);
 
-      window.clearInterval(state.interval);
+      clearInterval(state.interval);
       state.interval = null;
-      window.setTimeout(
-        state.onDoneLoading.bind(window, allFailures), 10
+      setTimeout(
+        state.onDoneLoading.bind(self, allFailures), 10
       );
       return;
     }
   }
 };
 
-function pollAssetQueue () {      
+function pollAssetQueue () {
   var state = this;
 
   var w = 0;
@@ -939,13 +943,13 @@ function pollAssetQueue () {
       }
 
       JSIL.Host.logWriteLine("The asset '" + assetPath + "' could not be loaded: " + errorText);
-    };    
+    };
   };
 
   while ((state.assetsLoading < maxAssetsLoading) && (state.loadIndex < state.assetCount)) {
     try {
       var assetSpec = state.assets[state.loadIndex];
-    
+
       var assetType = assetSpec[0];
       var assetPath = assetSpec[1];
       var assetData = assetSpec[2] || null;
@@ -955,9 +959,9 @@ function pollAssetQueue () {
       if (assetData !== null)
         sizeBytes = assetData.sizeBytes || 1;
 
-      var stepCallback = makeStepCallback(state, assetType, sizeBytes, state.loadIndex, assetPath); 
-      var errorCallback = makeErrorCallback(assetPath, assetSpec);    
-      
+      var stepCallback = makeStepCallback(state, assetType, sizeBytes, state.loadIndex, assetPath);
+      var errorCallback = makeErrorCallback(assetPath, assetSpec);
+
       if (typeof (assetLoader) !== "function") {
         errorCallback("No asset loader registered for type '" + assetType + "'.");
       } else {
@@ -969,9 +973,9 @@ function pollAssetQueue () {
       state.loadIndex += 1;
     }
   }
-    
+
   if (state.assetsLoaded >= state.assetCount) {
-    window.clearInterval(state.interval);
+    clearInterval(state.interval);
     state.interval = null;
 
     state.assetsLoadingNames = {};
@@ -988,10 +992,10 @@ function pollAssetQueue () {
           break;
         case "NativeLibrary":
           lhsTypeIndex = 0;
-          break;        
+          break;
         case "Script":
           lhsTypeIndex = 1;
-          break;        
+          break;
       }
 
       switch (rhs[0]) {
@@ -1001,7 +1005,7 @@ function pollAssetQueue () {
           break;
         case "NativeLibrary":
           rhsTypeIndex = 0;
-          break;        
+          break;
         case "Script":
           rhsTypeIndex = 1;
           break;
@@ -1014,7 +1018,7 @@ function pollAssetQueue () {
       return result;
     });
 
-    state.interval = window.setInterval(finishLoading.bind(state), 1);
+    state.interval = setInterval(finishLoading.bind(state), 1);
 
     return;
   }
@@ -1053,7 +1057,7 @@ function loadAssets (assets, onDoneLoading) {
     state.assetBytes += sizeBytes;
   }
 
-  state.interval = window.setInterval(pollAssetQueue.bind(state), 1);
+  state.interval = setInterval(pollAssetQueue.bind(state), 1);
 };
 
 function beginLoading () {
@@ -1061,12 +1065,12 @@ function beginLoading () {
 
   $jsilbrowserstate.isLoading = true;
 
-  var progressBar = document.getElementById("progressBar");
-  var loadButton = document.getElementById("loadButton");
-  var fullscreenButton = document.getElementById("fullscreenButton");
-  var loadingProgress = document.getElementById("loadingProgress");
-  var stats = document.getElementById("stats");
-  
+  var progressBar = !!self.window ? document.getElementById("progressBar") : null;
+  var loadButton = !!self.window ? document.getElementById("loadButton") : null;
+  var fullscreenButton = !!self.window ? document.getElementById("fullscreenButton") : null;
+  var loadingProgress = !!self.window ? document.getElementById("loadingProgress") : null;
+  var stats = !!self.window ? document.getElementById("stats") : null;
+
   if (progressBar)
     progressBar.style.width = "0px";
   if (loadButton)
@@ -1086,7 +1090,7 @@ function beginLoading () {
   }
 
   var allAssetsToLoad = [];
-  if (typeof (window.assetsToLoad) !== "undefined") {
+  if (typeof (self.assetsToLoad) !== "undefined") {
     for (var i = 0, l = assetsToLoad.length; i < l; i++)
       pushAsset(assetsToLoad[i]);
   }
@@ -1100,18 +1104,18 @@ function beginLoading () {
 
     }
   }
-  
+
   JSIL.Host.logWrite("Loading data ... ");
   loadAssets(allAssetsToLoad, browserFinishedLoadingCallback);
 };
 
 function browserFinishedLoadingCallback (loadFailures) {
-  var progressBar = document.getElementById("progressBar");
-  var loadButton = document.getElementById("loadButton");
-  var fullscreenButton = document.getElementById("fullscreenButton");
-  var loadingProgress = document.getElementById("loadingProgress");
-  var stats = document.getElementById("stats");
-  
+  var progressBar = !!self.window ? document.getElementById("progressBar") : null;
+  var loadButton = !!self.window ? document.getElementById("loadButton"): null;
+  var fullscreenButton = !!self.window ? document.getElementById("fullscreenButton"): null;
+  var loadingProgress = !!self.window ? document.getElementById("loadingProgress"): null;
+  var stats = !!self.window ? document.getElementById("stats") : null;
+
   $jsilbrowserstate.isLoading = false;
   $jsilbrowserstate.isLoaded = true;
 
@@ -1120,7 +1124,7 @@ function browserFinishedLoadingCallback (loadFailures) {
   } else {
     JSIL.Host.logWriteLine("done.");
   }
-  try {     
+  try {
     if (fullscreenButton && canGoFullscreen)
       fullscreenButton.style.display = "";
 
@@ -1141,7 +1145,7 @@ function browserFinishedLoadingCallback (loadFailures) {
       }
     }
 
-    // Main doesn't block since we're using the browser's event loop          
+    // Main doesn't block since we're using the browser's event loop
   } finally {
     $jsilbrowserstate.isMainRunning = false;
 
@@ -1190,8 +1194,8 @@ function generateHTML () {
     progressDiv.innerHTML = (
       '  <div id="progressBar"></div>' +
       '  <span id="progressText"></span>'
-    );        
-  }  
+    );
+  }
 };
 
 function setupStats () {
@@ -1217,13 +1221,13 @@ function setupStats () {
         '<span id="replayState"></span><br>';
 
       if (!jsilConfig.fastReplay) {
-        statsHtml += 
+        statsHtml +=
           '<input type="checkbox" id="fastReplay" name="fastReplay"> <label for="fastReplay">Fast Playback</label>';
       }
     }
 
     if (jsilConfig.record) {
-      statsHtml += 
+      statsHtml +=
         '<br><span id="recordState"></span><br>' +
         '<button id="saveRecording">Save Recording</button>';
     }
@@ -1265,7 +1269,7 @@ function setupStats () {
         e.textContent = effectiveFramerate.toFixed(2);
 
         var cacheSizeMb = (cacheSize / (1024 * 1024)).toFixed(1);
-        
+
         if (isWebGL) {
           e = document.getElementById("usingWebGL");
           e.title = "Using WebGL for rendering";
@@ -1291,13 +1295,14 @@ function setupStats () {
 
   JSIL.Host.registerService("performanceReporter", {
     report: performanceReporterFunction
-  });  
+  });
 };
 
 function onLoad () {
   registerErrorHandler();
 
-  initBrowserHooks();  
+    if (!!self.window){
+  initBrowserHooks();
 
   generateHTML();
   setupStats();
@@ -1307,6 +1312,13 @@ function onLoad () {
   var loadingProgress = document.getElementById("loadingProgress");
   var fullscreenButton = document.getElementById("fullscreenButton");
   var statsElement = document.getElementById("stats");
+    } else {
+        var log = null;
+        var loadButton = null;
+        var loadingProgress = null;
+        var fullscreenButton = null;
+        var statsElement = null;
+    }
 
   if (log)
     log.value = "";
@@ -1325,11 +1337,11 @@ function onLoad () {
     if (jsilConfig.getFullscreenElement)
       fullscreenElement = jsilConfig.getFullscreenElement();
 
-    var reqFullscreen = fullscreenElement.requestFullScreenWithKeys || 
+    var reqFullscreen = fullscreenElement.requestFullScreenWithKeys ||
       fullscreenElement.mozRequestFullScreenWithKeys ||
       fullscreenElement.webkitRequestFullScreenWithKeys ||
-      fullscreenElement.requestFullscreen || 
-      fullscreenElement.mozRequestFullScreen || 
+      fullscreenElement.requestFullscreen ||
+      fullscreenElement.mozRequestFullScreen ||
       fullscreenElement.webkitRequestFullScreen ||
       null;
 
@@ -1341,13 +1353,13 @@ function onLoad () {
       };
 
       var onFullscreenChange = function () {
-        var isFullscreen = document.fullscreen || 
+        var isFullscreen = document.fullscreen ||
           document.fullScreen ||
-          document.mozFullScreen || 
+          document.mozFullScreen ||
           document.webkitIsFullScreen ||
-          fullscreenElement.fullscreen || 
+          fullscreenElement.fullscreen ||
           fullscreenElement.fullScreen ||
-          fullscreenElement.mozFullScreen || 
+          fullscreenElement.mozFullScreen ||
           fullscreenElement.webkitIsFullScreen ||
           false;
 
@@ -1384,12 +1396,12 @@ function onLoad () {
       );
     }
   };
-  
+
   if (loadButton && !jsilConfig.autoPlay) {
     loadButton.addEventListener(
       "click", beginLoading, true
     );
-  
+
     if (loadingProgress)
       loadingProgress.style.display = "none";
   } else {
@@ -1398,9 +1410,9 @@ function onLoad () {
 }
 
 function registerErrorHandler () {
-  var oldErrorHandler = window.onerror;
-  
-  window.onerror = function JSIL_OnUnhandledException (errorMsg, url, lineNumber) {
+  var oldErrorHandler = self.onerror;
+
+  self.onerror = function JSIL_OnUnhandledException (errorMsg, url, lineNumber) {
     JSIL.Host.logWriteLine("Unhandled exception at " + url + " line " + lineNumber + ":");
     JSIL.Host.logWriteLine(errorMsg);
 
@@ -1415,7 +1427,7 @@ function stringifyLoadError (error) {
   if (error && error.statusText)
     return error.statusText;
   else if (
-    error && 
+    error &&
     (typeof (error) === "object") &&
     (error.toString().indexOf("[object") === 0)
   )
@@ -1435,11 +1447,11 @@ function showSaveRecordingDialog () {
     var dialog = document.createElement("div");
     dialog.id = "saveRecordingDialog";
 
-    dialog.innerHTML = 
+    dialog.innerHTML =
       '<label for="recordingName">Recording Name:</label> ' +
       '<input type="text" id="recordingName" value="test" style="background: white; color: black"><br>' +
       '<a id="saveRecordingToLocalStorage" href="#" style="color: black">Save to Local Storage</a> | ' +
-      '<a id="saveRecordingAsFile" download="test.replay" target="_blank" href="#" style="color: black">Download</a> | ' + 
+      '<a id="saveRecordingAsFile" download="test.replay" target="_blank" href="#" style="color: black">Download</a> | ' +
       '<a id="cancelSaveRecording" href="#" style="color: black">Close</a>';
 
     dialog.style.position = "absolute";
@@ -1509,7 +1521,7 @@ function hideSaveRecordingDialog (evt) {
   try {
     Microsoft.Xna.Framework.Game.ForceUnpause();
   } catch (exc) {
-  }  
+  }
 };
 
 JSIL.Browser.OneShotEventListenerCount = 0;
