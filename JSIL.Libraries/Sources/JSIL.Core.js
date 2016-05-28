@@ -8422,7 +8422,7 @@ JSIL.InterfaceMethod.prototype.GetVariantInvocationCandidates = function (thisRe
 
   if (typeof (result) === "undefined") {
     cache[typeId] = result = JSIL.$GenerateVariantInvocationCandidates(
-      this.typeObject, this.signature, this.signature != null ? this.qualifiedMethodName : this.methodName, this.variantGenericArguments, JSIL.GetType(thisReference)
+      this.typeObject, this.signature, this.signature != null ? this.qualifiedName : this.methodName, this.variantGenericArguments, JSIL.GetType(thisReference)
     );
   }
 
