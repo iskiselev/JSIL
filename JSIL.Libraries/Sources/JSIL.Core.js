@@ -3031,11 +3031,8 @@ JSIL.FixupInterfaces = function (publicInterface, typeObject) {
   if (typeObject.IsInterface)
     return;
 
-  // This is the table of interfaces that is used by .Overrides' numeric indices.
-  var indexedInterfaceTable = JSIL.GetInterfacesImplementedByType(typeObject, false, false);
-
   // This is the table of every interface we actually implement (exhaustively).
-  var interfaces = JSIL.GetInterfacesImplementedByType(typeObject, true, false);
+  var interfaces = [typeObject].concat(JSIL.GetInterfacesImplementedByType(typeObject, true, false));
 
   if (!interfaces.length)
     return;
@@ -3102,17 +3099,18 @@ JSIL.FixupInterfaces = function (publicInterface, typeObject) {
 
     var ifaceName = iface.__FullNameWithoutArguments__ || iface.__FullName__;
     var ifaceLocalName = JSIL.GetLocalName(ifaceName);
-    if (iface.IsInterface !== true) {
+    /*if (iface.IsInterface !== true) {
       JSIL.Host.warning("Type " + ifaceName + " is not an interface.");
       continue __interfaces__;
-    }
+    }*/
 
     // In cases where an interface method (IInterface_MethodName) is implemented by a regular method
     //  (MethodName), we make a copy of the regular method with the name of the interface method, so
     //  that attempts to directly invoke the interface method will still work.
     var members = JSIL.GetMembersInternal(
       iface, 
-      $jsilcore.BindingFlags.$Flags("DeclaredOnly", "Instance", "NonPublic", "Public")
+      $jsilcore.BindingFlags.$Flags("DeclaredOnly", "Instance", "NonPublic", "Public"),
+      "MethodInfo"
     );
     var proto = publicInterface.prototype;
 
@@ -8531,14 +8529,10 @@ JSIL.InterfaceMethod.prototype.toString = function () {
 
 
 JSIL.$GetSignaturePrefixForType = function (typeObject) {
-  if (typeObject.IsInterface) {
-    if (typeObject.__OpenType__)
-      return "I" + typeObject.__OpenType__.__TypeId__ + "$";
-    else
-      return "I" + typeObject.__TypeId__ + "$";    
-  } else {
-    return "";
-  }
+  if (typeObject.__OpenType__)
+    return "I" + typeObject.__OpenType__.__TypeId__ + "$";
+  else
+    return "I" + typeObject.__TypeId__ + "$";
 };
 
 
