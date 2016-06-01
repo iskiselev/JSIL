@@ -8380,6 +8380,27 @@ JSIL.ResolvedMethodSignature.prototype.toString = function () {
   return this.methodSignature.toString.apply(this.methodSignature, arguments);
 };
 
+JSIL.CreateQualifiedName = function (typeObject, methodName, isStatic, signature, fallbackMethod) {
+}
+
+JSIL.QualifiedNameInfo = function (typeObject, methodName, isStatic, signature, fallbackMethod) {
+  this.typeObject = typeObject;
+  this.methodName = methodName;
+  if (signature) {
+    // Important so ICs don't get mixed up.
+    this.signature = signature.Clone(true);
+  } else {
+    this.signature = null;
+  }
+
+  this.qualifiedName = JSIL.$GetSignaturePrefixForType(typeObject) + this.methodName;
+}
+
+JSIL.QualifiedNameInfo.prototype.toString = function () {
+  // HACK: This makes it possible to do
+  //  MethodSignature.CallVirtual(IFoo.Method, thisReference)
+  return this.qualifiedName;
+};
 
 JSIL.InterfaceMethod = function (typeObject, methodName, signature, interfaceMemberFallbackMethod) {
   this.typeObject = typeObject;
