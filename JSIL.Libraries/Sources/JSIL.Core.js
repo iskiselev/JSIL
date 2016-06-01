@@ -7346,6 +7346,14 @@ JSIL.SignatureBase.prototype.GetNamedKey = function (name, includeReturnType) {
   return this.GetNamedKey$CacheMiss(name, includeReturnType);
 };
 
+JSIL.SignatureBase.prototype.LookupVariantMethodKey = function (name, thisArgument) {
+  if (name instanceof JSIL.InterfaceMethod && (name.variantGenericArguments.length > 0)) {
+    return name.LookupVariantMethodKey(thisArgument, this);
+  }
+
+  return this.GetNamedKey(name, true);
+};
+
 JSIL.SignatureBase.prototype.GetUnnamedKey$CacheMiss = function (includeReturnType) {
   var result = this.get_Hash(includeReturnType);
 
@@ -7877,7 +7885,11 @@ JSIL.MethodSignature.prototype.$MakeInlineCacheBody = function (callMethodName, 
         return "this.methodKey";
       }
     } else {
-      return "this.GetNamedKey(name, true)";
+      if (callMethodName === "CallVirtual") {
+        return "this.LookupVariantMethodKey(name, thisReference)";
+      } else {
+        return "this.LookupVariantMethodKey(name, null)";
+      }
     }
   };
 
@@ -8410,7 +8422,7 @@ JSIL.InterfaceMethod.prototype.$StaticMethodNotFound = function (thisReference, 
   );
 };
 
-JSIL.InterfaceMethod.prototype.GetVariantInvocationCandidates = function (thisReference) {
+JSIL.InterfaceMethod.prototype.GetVariantInvocationCandidates = function (thisReference, signature) {
   var cache = this.variantInvocationCandidateCache;
   var typeId = thisReference.__ThisTypeId__;
 
@@ -8421,8 +8433,17 @@ JSIL.InterfaceMethod.prototype.GetVariantInvocationCandidates = function (thisRe
   var result = cache[typeId];
 
   if (typeof (result) === "undefined") {
+    var signatureToResolve = signature;
+    if (!(signature || false)) {
+      signatureToResolve = this.signature;
+    }
+
     cache[typeId] = result = JSIL.$GenerateVariantInvocationCandidates(
-      this.typeObject, this.signature, this.signature != null ? this.qualifiedName : this.methodName, this.variantGenericArguments, JSIL.GetType(thisReference)
+      this.typeObject,
+      signatureToResolve,
+      signatureToResolve != null ? this.qualifiedName : this.methodName,
+      this.variantGenericArguments,
+      JSIL.GetType(thisReference)
     );
   }
 
@@ -8468,8 +8489,8 @@ JSIL.InterfaceMethod.prototype.LookupMethod = function (thisReference, name) {
   return result;
 };
 
-JSIL.InterfaceMethod.prototype.LookupVariantMethodKey = function (thisReference) {
-  var variantInvocationCandidates = this.GetVariantInvocationCandidates(thisReference);
+JSIL.InterfaceMethod.prototype.LookupVariantMethodKey = function (thisReference, signature) {
+  var variantInvocationCandidates = this.GetVariantInvocationCandidates(thisReference, signature);
 
   if (variantInvocationCandidates) {
     for (var i = 0, l = variantInvocationCandidates.length; i < l; i++) {
