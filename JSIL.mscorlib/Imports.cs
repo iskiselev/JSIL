@@ -1,4 +1,6 @@
-﻿namespace JSIL.mscorlib
+﻿using System.Runtime.Serialization;
+
+namespace JSIL.mscorlib
 {
     using global::System;
     using global::System.Globalization;
@@ -9,6 +11,20 @@
     [JSImportType]
     class NumberFormatInfoImport 
     {
+        [JSIgnore]
+        private void OnSerializing(StreamingContext ctx)
+        {
+        }
+
+        [JSIgnore]
+        private void OnDeserializing(StreamingContext ctx)
+        {
+        }
+
+        [JSIgnore]
+        private void OnDeserialized(StreamingContext ctx)
+        {
+        }
     }
     
     [JSProxy(typeof(ICloneable))]
@@ -20,6 +36,12 @@
     [JSProxy(typeof(IFormattable))]
     [JSImportType]
     interface IFormattableImport
+    {
+    }
+
+    [JSProxy(typeof(DigitShapes))]
+    [JSImportType]
+    class DigitShapesImport
     {
     }
 
