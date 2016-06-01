@@ -8494,16 +8494,15 @@ JSIL.InterfaceMethod.prototype.RegisterSignature = function (signature) {
   }
 
   var cacheKey = signature.get_Hash();
-  var ofCache = this.__OfCache__;
 
-  var result = ofCache[cacheKey];
+  var result = this.__OfCache__[cacheKey];
   if (result)
     JSIL.RuntimeErrorFormat(
     "InterfaceMethod '{0}' already has registred signature {1}", [
       this.methodName,
       signature.toString(this.methodName)]);
 
-  ofCache[cacheKey] = new JSIL.InterfaceMethod(this.typeObject, this.methodName, this.signature, this.fallbackMethod);
+  this.__OfCache__[cacheKey] = new JSIL.InterfaceMethod(this.typeObject, this.methodName, signature, this.fallbackMethod);
 };
 
 JSIL.InterfaceMethod.prototype.Of = function (signature) {
@@ -8518,11 +8517,10 @@ JSIL.InterfaceMethod.prototype.Of = function (signature) {
     "InterfaceMethod Of should accept non-null signature", []);
   }
 
-  var cacheKey = JSIL.HashTypeArgumentArray(arguments, typeObject.__Context__);
-  var ofCache = this.__OfCache__;
+  var cacheKey = signature.get_Hash();
 
   // If we do not return the same exact closed type instance from every call to Of(...), derivation checks will fail
-  var result = ofCache[cacheKey];
+  var result = this.__OfCache__[cacheKey];
   if (!result)
     JSIL.RuntimeErrorFormat(
     "InterfaceMethod '{0}' already has no registred signature {1}", [
@@ -8632,7 +8630,7 @@ JSIL.InterfaceMethod.prototype.$MakeCallMethod = function () {
       var target = thisObject[key];
       var targetFunctionArgs = Array.prototype.slice.call(arguments, 2);
       if (genericArgs) {
-        resolvedTarget = target.apply(thisObject, genericArgs);
+        var resolvedTarget = target.apply(thisObject, genericArgs);
         return resolvedTarget(targetFunctionArgs);
       } else {
         return target.apply(thisObject, targetFunctionArgs);
