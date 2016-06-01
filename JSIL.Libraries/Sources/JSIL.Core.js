@@ -7211,10 +7211,23 @@ JSIL.InterfaceBuilder.prototype.Method = function (_descriptor, methodName, sign
 
     JSIL.SetValueProperty(descriptor.Target, mangledName, methodObject);
 
-    if (descriptor.Target[descriptor.EscapedName])
-      methodObject = new JSIL.InterfaceMethod(this.typeObject, descriptor.EscapedName, null, this.interfaceMemberFallbackMethod);
-    
-    JSIL.SetValueProperty(descriptor.Target, descriptor.EscapedName, methodObject);
+    var previousMember = descriptor.Target[descriptor.EscapedName];
+    if (previousMember) {
+      if (previousMember.signature) {
+        //Replace non-overload form with overload;
+        methodObject = new JSIL.InterfaceMethod(this.typeObject, descriptor.EscapedName, null, this.interfaceMemberFallbackMethod);
+        methodObject.RegisterSignature(previousMember.signature);
+        previousMember = methodObject;
+      }
+      else {
+        methodObject = null;
+      }
+      previousMember.RegisterSignature(signature)
+    }
+
+    if (methodObject != null) {
+      JSIL.SetValueProperty(descriptor.Target, descriptor.EscapedName, methodObject);
+    }
   } else {
     if (typeof (fn) !== "function")
       JSIL.RuntimeError("Method expected a function as 4th argument when defining '" + methodName + "'");
@@ -8406,6 +8419,7 @@ JSIL.InterfaceMethod = function (typeObject, methodName, signature, interfaceMem
   this.typeObject = typeObject;
   this.variantGenericArguments = JSIL.$FindVariantGenericArguments(typeObject);
   this.methodName = methodName;
+  this.__OfCache__ = {};
 
   if (signature) {
     // Important so ICs don't get mixed up.
@@ -8422,7 +8436,7 @@ JSIL.InterfaceMethod = function (typeObject, methodName, signature, interfaceMem
   }
 
   JSIL.SetLazyValueProperty(this, "methodKey", function () {
-    return this.signature.GetNamedKey(this.qualifiedName, true);
+    return this.signature != null ? this.signature.GetNamedKey(this.qualifiedName, true) : this.qualifiedName;
   });
 };
 
@@ -8434,10 +8448,60 @@ JSIL.InterfaceMethod.prototype.Rebind = function (newTypeObject, newSignature) {
   return result;
 };
 
+JSIL.InterfaceMethod.prototype.RegisterSignature = function (signature) {
+  if (this.signature != null) {
+    JSIL.RuntimeErrorFormat(
+    "InterfaceMethod '{0}' already have signature", [
+      this.signature.toString(this.methodName)]);
+  }
+  if (signature == null) {
+    JSIL.RuntimeErrorFormat(
+    "InterfaceMethod RegisterSignature should accept non-null signature", []);
+  }
+
+  var cacheKey = signature.get_Hash();
+  var ofCache = this.__OfCache__;
+
+  var result = ofCache[cacheKey];
+  if (result)
+    JSIL.RuntimeErrorFormat(
+    "InterfaceMethod '{0}' already has registred signature {1}", [
+      this.methodName,
+      signature.toString(this.methodName)]);
+
+  ofCache[cacheKey] = new JSIL.InterfaceMethod(this.typeObject, this.methodName, this.signature, this.fallbackMethod);
+};
+
+JSIL.InterfaceMethod.prototype.Of = function (signature) {
+  if (this.signature != null) {
+    JSIL.RuntimeErrorFormat(
+    "InterfaceMethod '{0}' already have signature", [
+      this.signature.toString(this.methodName),
+      thisReference]);
+  }
+  if (signature == null) {
+    JSIL.RuntimeErrorFormat(
+    "InterfaceMethod Of should accept non-null signature", []);
+  }
+
+  var cacheKey = JSIL.HashTypeArgumentArray(arguments, typeObject.__Context__);
+  var ofCache = this.__OfCache__;
+
+  // If we do not return the same exact closed type instance from every call to Of(...), derivation checks will fail
+  var result = ofCache[cacheKey];
+  if (!result)
+    JSIL.RuntimeErrorFormat(
+    "InterfaceMethod '{0}' already has no registred signature {1}", [
+      this.methodName,
+      signature.toString(this.methodName)]);
+
+  return result;
+};
+
 JSIL.InterfaceMethod.prototype.$StaticMethodNotFound = function (thisReference, methodName) {
   JSIL.RuntimeErrorFormat(
     "Interface method '{0}' not found in context '{1}'", [
-      this.signature.toString(this.methodName),
+      this.signature != null ? this.signature.toString(this.methodName) : this.methodName,
       thisReference
     ]
   );
@@ -8462,7 +8526,7 @@ JSIL.InterfaceMethod.prototype.GetVariantInvocationCandidates = function (thisRe
     cache[typeId] = result = JSIL.$GenerateVariantInvocationCandidates(
       this.typeObject,
       signatureToResolve,
-      signatureToResolve != null ? this.qualifiedName : this.methodName,
+      this.methodName,
       this.variantGenericArguments,
       JSIL.GetType(thisReference)
     );
@@ -8523,7 +8587,7 @@ JSIL.InterfaceMethod.prototype.LookupVariantMethodKey = function (thisReference,
     }
   }
 
-  return this.methodKey;
+  return signature != null ? signature.GetNamedKey(this.qualifiedName, true) : this.methodKey;
 };
 
 JSIL.InterfaceMethod.prototype.$MakeCallMethod = function () {
@@ -10439,7 +10503,7 @@ JSIL.WrapCastMethodsForInterfaceVariance = function (typeObject, isFunction, asF
   return result;
 };
 
-JSIL.$GenerateVariantInvocationCandidates = function (interfaceObject, signature, qualifiedMethodName, variantGenericArguments, thisReferenceType) {
+JSIL.$GenerateVariantInvocationCandidates = function (interfaceObject, signature, methodName, variantGenericArguments, thisReferenceType) {
   var trace = false;
 
   var matchingInterfaces = JSIL.$FindMatchingInterfacesThroughVariance(interfaceObject, thisReferenceType, variantGenericArguments);
@@ -10449,10 +10513,6 @@ JSIL.$GenerateVariantInvocationCandidates = function (interfaceObject, signature
 
   if (!matchingInterfaces.length)
     return null;
-  else if (signature != null && !signature.openSignature) {
-    // FIXME: Is this right?
-    return null;
-  }
 
   var result = [];
 
@@ -10469,14 +10529,30 @@ JSIL.$GenerateVariantInvocationCandidates = function (interfaceObject, signature
     var candidate;
 
     if (signature != null) {
+      var openSignature = null;
       // FIXME: This is incredibly expensive.
+      if (signature.openSignature) {
+        openSignature = signature.openSignature
+      } else {
+        var matchingMethods = record.interface.$GetMatchingInstanceMethods(methodName, signature.returnType, signature.argumentTypes);
+        for (var i = 0; i < matchingMethods.length; i++) {
+          if (matchingMethods[i]._data.genericSignature != null) {
+            openSignature = matchingMethods[i]._data.genericSignature;
+            break;
+          }
+        }
+        if (openSignature == "null") {
+          JSIL.RuntimeError("Open signature not found");
+        }
+      }
+
       var variantSignature = JSIL.$ResolveGenericMethodSignature(
-        record.interface, signature.openSignature, record.interface.__PublicInterface__
+        record.interface, openSignature, record.interface.__PublicInterface__
       );
 
-      candidate = variantSignature.GetNamedKey(qualifiedMethodName, true);
+      candidate = JSIL.$GetSignaturePrefixForType(record.interface) + variantSignature.GetNamedKey(methodName, true);
     } else {
-      candidate = JSIL.$GetSignaturePrefixForType(record.interface) + qualifiedMethodName;
+      candidate = JSIL.$GetSignaturePrefixForType(record.interface) + methodName;
     }
 
     if (trace)
