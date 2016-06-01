@@ -2558,6 +2558,8 @@ namespace JSIL {
         public void VisitNode (JSLocalCachedInterfaceMemberExpression lcime) {
             Output.Identifier(lcime.InterfaceType, ReferenceContext);
             Output.Dot();
+            Output.Identifier("$Methods");
+            Output.Dot();
             Output.Identifier(lcime.MemberName, EscapingMode.MemberIdentifier);
         }
 

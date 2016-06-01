@@ -1304,6 +1304,8 @@ namespace JSIL {
                         Formatter.WriteRaw("return ($IM{0:X2} = JSIL.Memoize(", cim.Value);
                         Formatter.Identifier(cim.Key.InterfaceType, astEmitter.ReferenceContext, false);
                         Formatter.Dot();
+                        Formatter.Identifier("$Methods");
+                        Formatter.Dot();
                         Formatter.Identifier(cim.Key.InterfaceMember, EscapingMode.MemberIdentifier);
                         Formatter.WriteRaw(")) ()");
                         Formatter.Semicolon(true);

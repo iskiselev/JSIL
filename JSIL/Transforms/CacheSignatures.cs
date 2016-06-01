@@ -611,6 +611,8 @@ namespace JSIL.Transforms {
             if (!Global.InterfaceMembers.TryGetValue(record, out index)) {
                 output.Identifier(jsMethod.Reference.DeclaringType, referenceContext, false);
                 output.Dot();
+                output.Identifier("$Methods");
+                output.Dot();
                 astEmitter.Emit(method);
             } else {
                 output.WriteRaw("$IM{0:X2}", index);
