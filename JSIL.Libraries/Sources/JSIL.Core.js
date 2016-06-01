@@ -2869,6 +2869,8 @@ JSIL.RenameGenericMethods = function (publicInterface, typeObject) {
 
   var isInterface = typeObject.IsInterface;
 
+  var oldObjects = {};
+
   _loop:
   for (var i = 0, l = members.length; i < l; i++) {
     var member = members[i];
@@ -2891,7 +2893,13 @@ JSIL.RenameGenericMethods = function (publicInterface, typeObject) {
     var target = descriptor.Static ? publicInterface : publicInterface.prototype;
 
     if (isInterface) {
-      var oldObject = publicInterface[unqualifiedName];
+      var isAlreadyDefined = true;
+      var oldObject = oldObjects[unqualifiedName];
+      if (!oldObject) {
+        oldObject = publicInterface[unqualifiedName];
+        isAlreadyDefined = false;
+      }
+
       if (!oldObject)
         JSIL.RuntimeError("Failed to find unrenamed generic interface method");
 
@@ -2909,9 +2917,24 @@ JSIL.RenameGenericMethods = function (publicInterface, typeObject) {
           }
         }
       }
+      if (oldObject.signature) {
+        var newObject = oldObject.Rebind(typeObject, signature);
+        JSIL.SetValueProperty(publicInterface, unqualifiedName, newObject);
+      }
+      else {
+        var targetInterfaceMethod = null;
+        if (!isAlreadyDefined) {
+          var targetInterfaceMethod = oldObject.Rebind(typeObject, null);
+          JSIL.SetValueProperty(publicInterface, unqualifiedName, targetInterfaceMethod);
+        } else {
+          targetInterfaceMethod = publicInterface[unqualifiedName];
+        }
 
-      var newObject = oldObject.Rebind(typeObject, signature);
-      JSIL.SetValueProperty(publicInterface, unqualifiedName, newObject);
+        targetInterfaceMethod.RegisterSignature(signature);
+      }
+
+      if (!isAlreadyDefined)
+        oldObjects[unqualifiedName] = oldObject;
 
       if (trace)
         console.log(typeObject.__FullName__ + ": " + unqualifiedName + " rebound");
