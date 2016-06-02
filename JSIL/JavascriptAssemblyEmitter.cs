@@ -405,7 +405,7 @@ namespace JSIL {
 
             bool isExternal, isReplaced, methodIsProxied;
 
-            if (!Translator.ShouldTranslateMethodBody(
+            if (!Translator.ShouldTranslateMethod(
                 method, methodInfo, stubbed,
                 out isExternal, out isReplaced, out methodIsProxied
             ))
@@ -437,7 +437,7 @@ namespace JSIL {
                 Formatter.LPar();
 
                 // FIXME: Include IsVirtual?
-                Formatter.MemberDescriptor(method.IsPublic, method.IsStatic, method.IsVirtual, false);
+                Formatter.MemberDescriptor(method.IsPublic, method.IsStatic, method.IsVirtual, false, isAbstract:method.IsAbstract, isNewSlot:method.IsNewSlot);
 
                 Formatter.Comma();
                 Formatter.Value(Util.EscapeIdentifier(methodInfo.GetName(true), EscapingMode.String));
@@ -1143,7 +1143,7 @@ namespace JSIL {
 
             for (var i = 0; i < interfaces.Count; i++) {
                 var elt = interfaces.Array[interfaces.Offset + i];
-                if (elt.ImplementingType != typeInfo)
+                if (elt.ImplementingType != typeInfo && !elt.IsExpliclit)
                     continue;
                 if (elt.ImplementedInterface.Info.IsIgnored)
                     continue;

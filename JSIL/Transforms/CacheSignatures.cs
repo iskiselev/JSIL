@@ -613,7 +613,7 @@ namespace JSIL.Transforms {
                 output.Dot();
                 output.Identifier("$Methods");
                 output.Dot();
-                astEmitter.Emit(method);
+                output.Identifier(jsMethod.GetNameForInstanceReference());
             } else {
                 output.WriteRaw("$IM{0:X2}", index);
                 output.LPar();

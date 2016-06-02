@@ -60,10 +60,12 @@ namespace JSIL.Internal {
     public struct RecursiveInterfaceToken {
         public readonly TypeInfo ImplementingType;
         public readonly InterfaceToken ImplementedInterface;
+        public readonly bool IsExpliclit;
 
-        public RecursiveInterfaceToken (TypeInfo implementingType, InterfaceToken implementedInterface) {
+        public RecursiveInterfaceToken (TypeInfo implementingType, InterfaceToken implementedInterface, bool isExpliclit) {
             ImplementingType = implementingType;
             ImplementedInterface = implementedInterface;
+            IsExpliclit = isExpliclit;
         }
     }
 
@@ -885,9 +887,11 @@ namespace JSIL.Internal {
                     var list = new List<RecursiveInterfaceToken>();
                     var types = SelfAndBaseTypesRecursive.Reverse();
 
+                    var typeInterfaces = Interfaces.ToList();
+
                     foreach (var type in types)
                         foreach (var @interface in type.Interfaces.ToEnumerable())
-                            list.Add(new RecursiveInterfaceToken(type, @interface));
+                            list.Add(new RecursiveInterfaceToken(type, @interface, typeInterfaces.Any(item => item.Reference == @interface.Reference)));
 
                     // FIXME: Using ImmutableArrayPool here can leak.
                     _AllInterfacesRecursive = new ArraySegment<RecursiveInterfaceToken>(list

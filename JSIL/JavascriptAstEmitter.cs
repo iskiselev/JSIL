@@ -2358,7 +2358,7 @@ namespace JSIL {
                         Output.Identifier("null", EscapingMode.None);
                 };
 
-                if (isOverloaded) {
+                if (/*isOverloaded*/ jsm.GetNameForInstanceReference().IndexOf("ctor") < 0 && !runtimeDispatch) {
                     var methodName = Util.EscapeIdentifier(jsm.GetNameForInstanceReference(), EscapingMode.MemberIdentifier);
 
                     ReferenceContext.InvokingMethod = jsm.Reference;
@@ -2367,6 +2367,7 @@ namespace JSIL {
                             Output, Stack.OfType<JSFunctionExpression>().FirstOrDefault(),
                             jsm.Reference, method.Signature, ReferenceContext, false
                             );
+                        Output.Dot();
                         Output.Identifier("CallStatic");
                         Output.LPar();
 
@@ -2394,7 +2395,7 @@ namespace JSIL {
                         Output.WriteRaw(")");
 
                         Output.Dot();
-                        Output.WriteRaw("Call");
+                        Output.WriteRaw(invocation.ExplicitThis ? "CallNonVirtual" : "Call");
 
                         Output.LPar();
                         Visit(invocation.ThisReference, "ThisReference");
