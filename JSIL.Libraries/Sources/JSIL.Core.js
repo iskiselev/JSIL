@@ -3061,7 +3061,10 @@ JSIL.FixupInterfaces = function (publicInterface, typeObject) {
   var interfaces = [];
   for (var i = 0; i < types.length; i++) {
     if ("__TypeId__" in types[i]) {
-      interfaces.push(types[i])
+      interfaces.push(types[i]);
+    } else {
+      types.splice(i, 1);
+      i--;
     }
   }
 
@@ -3225,10 +3228,37 @@ JSIL.FixupInterfaces = function (publicInterface, typeObject) {
                 filtred.push(matchingMethods[k]);
             }
             matchingMethods = filtred;
+
+            //We already checked flags on type method, now we should check for NewSlot in base types
+            if (matchingMethods.length == 1 && !iface.IsInterface) {
+              for (var k = 1; k < types.length; k++) {
+                if (types[k] == iface) {
+                  break;
+                }
+                var matchingMethodsInTestType = types[k].$GetMatchingInstanceMethods(expectedInstanceName, parameterTypes, returnType);
+
+                var filtred = [];
+                for (var m = 0; m < matchingMethodsInTestType.length; m++) {
+                  if (matchingMethodsInTestType[m].get_IsVirtual())
+                    filtred.push(matchingMethodsInTestType[m]);
+                }
+
+                if (filtred.length > 0) {
+                  isAmbiguous = true;
+                  matchingMethods = [];
+                  break;
+                } else if (filtred.length == 1) {
+                  if (filtred[0]._descriptor.NewSlot) {
+                    matchingMethods = [];
+                  }
+                }
+              }
+            }
           }
 
           if (matchingMethods.length === 0) {
-            isMissing = true;
+            if (iface.IsInterface)
+              isMissing = true;
           } else if (matchingMethods.length > 1) {
             isAmbiguous = true;
           } else {
