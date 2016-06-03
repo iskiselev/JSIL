@@ -150,27 +150,35 @@ namespace JSIL.Internal {
     }
 
     public class NamedMethodSignature {
+        public readonly MethodInfo MethodInfo;
+        public readonly TypeInfo Source;
         public readonly MethodSignature Signature;
         public readonly string Name;
 
         private int? _Hash;
 
-        public NamedMethodSignature (string name, MethodSignature signature) {
-            Name = name;
-            Signature = signature;
+        public NamedMethodSignature(MethodInfo methodInfo) {
+            MethodInfo = methodInfo;
+            Source = methodInfo.DeclaringType;
+            Name = methodInfo.Name;
+            Signature = new MethodSignature(
+                    methodInfo.Source,
+                    methodInfo.ReturnType, (from p in methodInfo.Parameters select p.ParameterType).ToArray(),
+                    methodInfo.GenericParameterNames
+                );
             _Hash = null;
         }
 
         public override int GetHashCode() {
             if (!_Hash.HasValue)
-                _Hash = (Name.GetHashCode() ^ Signature.GetHashCode());
+                _Hash = (Source.GetHashCode() ^ Name.GetHashCode() ^ Signature.GetHashCode());
 
             return _Hash.Value;
         }
 
         public class Comparer : IEqualityComparer<NamedMethodSignature> {
             public bool Equals (NamedMethodSignature x, NamedMethodSignature y) {
-                var result = (x.Name == y.Name) && (x.Signature.Equals(y.Signature));
+                var result = (x.Name == y.Name) && x.Source == y.Source &&(x.Signature.Equals(y.Signature));
                 return result;
             }
 

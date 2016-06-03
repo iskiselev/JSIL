@@ -818,15 +818,22 @@ namespace JSIL.Internal {
             foreach (var t in selfAndBaseTypesRecursive) {
                 var ms = t.MethodSignatures;
 
+                // Register method in upper hierarchy
                 foreach (var nms in DeferredMethodSignatureSetUpdates) {
-                    var set = ms.GetOrCreateFor(nms.Name);
-                    set.Add(nms);
+                    if (!nms.MethodInfo.IsVirtual || nms.MethodInfo.Member.IsNewSlot) {
+                        var set = ms.GetOrCreateFor(nms.Name);
+                        set.Add(nms);
+                    }
                 }
 
+                // Register method from upper hierarchy
                 if (t != this) {
                     foreach (var nms in t.DeferredMethodSignatureSetUpdates) {
-                        var set = MethodSignatures.GetOrCreateFor(nms.Name);
-                        set.Add(nms);
+                        if (!nms.MethodInfo.IsVirtual || nms.MethodInfo.Member.IsNewSlot)
+                        {
+                            var set = MethodSignatures.GetOrCreateFor(nms.Name);
+                            set.Add(nms);
+                        }
                     }
                 }
             }
@@ -1953,13 +1960,7 @@ namespace JSIL.Internal {
         }
 
         protected void MakeSignature () {
-            _Signature = new NamedMethodSignature(
-                Name, new MethodSignature(
-                    Source, 
-                    ReturnType, (from p in Parameters select p.ParameterType).ToArray(),
-                    GenericParameterNames
-                )
-            );
+            _Signature = new NamedMethodSignature(this);
         }
 
         protected override string GetName () {
