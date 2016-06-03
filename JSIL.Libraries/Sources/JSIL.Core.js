@@ -3244,7 +3244,7 @@ JSIL.FixupInterfaces = function (publicInterface, typeObject) {
                     filtred.push(matchingMethodsInTestType[m]);
                 }
 
-                if (filtred.length > 0) {
+                if (filtred.length > 1) {
                   isAmbiguous = true;
                   matchingMethods = [];
                   break;
