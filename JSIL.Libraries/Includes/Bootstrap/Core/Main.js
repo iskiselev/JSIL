@@ -100,6 +100,7 @@ JSIL.DeclareNamespace("System.Runtime.InteropServices");
   //? include("Classes/System.Collections.Generic.LinkedList.js"); writeln();
   //? include("Classes/System.Collections.Generic.LinkedListNode.js"); writeln();
   //? include("Classes/System.Collections.BitArray.js"); writeln();
+  //? include("Interfaces/System.Collections.Generic.IEqualityComparer.js"); writeln();
 //? }
 
 //? include("Classes/System.Collections.Generic.Comparer.js"); writeln();
