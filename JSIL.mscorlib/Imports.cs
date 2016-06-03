@@ -1,4 +1,5 @@
 ﻿using System.Runtime.Serialization;
+using JSIL.Meta;
 
 namespace JSIL.mscorlib
 {
@@ -11,13 +12,6 @@ namespace JSIL.mscorlib
     [JSImportType]
     class NumberFormatInfoImport 
     {
-        [JSReplaceConstructor]
-        [JSIgnore]
-        private NumberFormatInfoImport(CultureDataImpot cultureData) { }
-
-        [JSReplaceConstructor]
-        private NumberFormatInfoImport() { }
-
         [JSIgnore]
         private void OnSerializing(StreamingContext ctx)
         {
@@ -86,10 +80,6 @@ namespace JSIL.mscorlib
             throw new NotImplementedException();
         }
     }
-
-
-    [JSProxy("System.Globalization.CultureData")]
-    class CultureDataImpot {}
 }
 
 namespace System
@@ -123,6 +113,13 @@ namespace System
         {
             return string.Empty;
         }
+    }
+}
+
+namespace System.Globalization {
+    [JSChangeName("CultureData")]
+    internal class CultureDataImport
+    {
     }
 }
 
