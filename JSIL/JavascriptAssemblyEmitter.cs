@@ -411,9 +411,8 @@ namespace JSIL {
             ))
                 return;
 
-            JSFunctionExpression function = Translator.GetFunctionBodyForMethod(
-                isExternal, methodInfo
-            );
+            JSFunctionExpression function = method.IsAbstract ? null :
+                Translator.GetFunctionBodyForMethod(isExternal, methodInfo);
 
             astEmitter.ReferenceContext.EnclosingType = method.DeclaringType;
             astEmitter.ReferenceContext.EnclosingMethod = null;

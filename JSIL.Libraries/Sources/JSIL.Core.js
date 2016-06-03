@@ -2902,7 +2902,7 @@ JSIL.RenameGenericMethods = function (publicInterface, typeObject) {
     var target = descriptor.Static ? publicInterface : publicInterface.prototype;
 
     //TODO: What should we do with mangledName form?
-    if (member.type == "MethodInfo" && !descriptor.Static) {
+    if (!descriptor.Static) {
       var isAlreadyDefined = true;
       var oldObject = oldObjects[unqualifiedName];
       if (!oldObject) {
@@ -3149,7 +3149,7 @@ JSIL.FixupInterfaces = function (publicInterface, typeObject) {
     var members = JSIL.GetMembersInternal(
       iface, 
       $jsilcore.BindingFlags.$Flags("DeclaredOnly", "Instance", "NonPublic", "Public"),
-      "MethodInfo"
+      "$MethodOrConstructor"
     );
     var proto = publicInterface.prototype;
 
@@ -3225,7 +3225,7 @@ JSIL.FixupInterfaces = function (publicInterface, typeObject) {
           if (iface != typeObject) {
             var filtred = [];
             for (var k = 0; k < matchingMethods.length; k++) {
-              if (matchingMethods[k].get_IsVirtual() && (!matchingMethods[k]._descriptor.NewSlot || isIfaceExplicitImplemented))
+              if (matchingMethods[k]._descriptor.Virtual && (!matchingMethods[k]._descriptor.NewSlot || isIfaceExplicitImplemented))
                 filtred.push(matchingMethods[k]);
             }
             matchingMethods = filtred;
@@ -3240,7 +3240,7 @@ JSIL.FixupInterfaces = function (publicInterface, typeObject) {
 
                 var filtred = [];
                 for (var m = 0; m < matchingMethodsInTestType.length; m++) {
-                  if (matchingMethodsInTestType[m].get_IsVirtual())
+                  if (matchingMethodsInTestType[m]._descriptor.Virtual)
                     filtred.push(matchingMethodsInTestType[m]);
                 }
 
