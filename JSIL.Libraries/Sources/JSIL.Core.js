@@ -7890,9 +7890,7 @@ JSIL.MethodSignature.prototype.$MakeInlineCacheBody = function (callMethodName, 
   var emitMissingMethodCheck = function (result, methodExpression, methodName, indentation) {
     var errMethod =
       indentation + "  " +
-      ((callMethodName === "CallStatic")
-        ? "this.$StaticMethodNotFound("
-        : "this.$MethodNotFound(");
+      ((callMethodName === "CallStatic") ? "this.$StaticMethodNotFound(" : "this.$MethodNotFound(");
 
     result.push(indentation + "if (!" + methodExpression + ")");
     if (thisReferenceArg !== methodLookupArg)
@@ -8620,7 +8618,7 @@ JSIL.InterfaceMethod.prototype.Of = function (signature) {
   return result;
 };
 
-JSIL.InterfaceMethod.prototype.$StaticMethodNotFound = function (thisReference, methodName) {
+JSIL.InterfaceMethod.prototype.$MethodNotFound = function (thisReference, methodName) {
   JSIL.RuntimeErrorFormat(
     "Interface method '{0}' not found in context '{1}'", [
       this.signature != null ? this.signature.toString(this.methodName) : this.methodName,
