@@ -275,6 +275,7 @@
     <Content Include="Includes\Storage\Classes\VirtualJunction.js" />
     <Content Include="Includes\Storage\Classes\VirtualVolume.js" />
     <Content Include="Includes\Storage\Main.js" />
+    <Content Include="Includes\XML\Classes\Other.js" />
     <Content Include="Includes\XML\Classes\System.Xml.Serialization.XmlSerializationReader.js" />
     <Content Include="Includes\XML\Classes\System.Xml.Serialization.XmlSerializer.js" />
     <Content Include="Includes\XML\Classes\System.Xml.XmlConvert.js" />

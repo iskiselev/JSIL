@@ -2358,7 +2358,7 @@ namespace JSIL {
                         Output.Identifier("null", EscapingMode.None);
                 };
 
-                if (/*isOverloaded*/ jsm.GetNameForInstanceReference().IndexOf("ctor") < 0 && !runtimeDispatch) {
+                if (isOverloaded /*jsm.GetNameForInstanceReference().IndexOf("ctor") < 0 && !runtimeDispatch*/) {
                     var methodName = Util.EscapeIdentifier(jsm.GetNameForInstanceReference(), EscapingMode.MemberIdentifier);
 
                     ReferenceContext.InvokingMethod = jsm.Reference;

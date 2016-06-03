@@ -1530,6 +1530,7 @@ JSIL.Initialize = function () {
   JSIL.InitializeType($jsilcore.System.Reflection.RuntimeAssembly);
   JSIL.InitializeType($jsilcore.System.Object);
 
+  JSIL.RunStaticConstructors($jsilcore.System.RuntimeType, $jsilcore.System.RuntimeType.__Type__);
   // As we use raw JS types, we should execute static ctor manually.
   JSIL.RunStaticConstructors($jsilcore.System.Boolean, $jsilcore.System.Boolean.__Type__);
   JSIL.RunStaticConstructors($jsilcore.System.Char, $jsilcore.System.Char.__Type__);
@@ -3509,27 +3510,28 @@ JSIL.CreateNamedFunction = function (name, argumentNames, body, closure) {
 
 JSIL.CreateRebindableNamedFunction = function (name, argumentNames, body, closureArgNames) {
   var strictPrefix = "\"use strict\";\r\n";
-  var uriPrefix = "", escapedFunctionIdentifier = "";
+  var uriSuffix = "", escapedFunctionIdentifier = "";
 
   if (name) {
-    uriPrefix = "//# sourceURL=jsil://closure/" + name + "\r\n";
+    uriSuffix = "//# sourceURL=jsil://closure/" + name;
     escapedFunctionIdentifier = JSIL.EscapeJSIdentifier(name);
   } else {
     escapedFunctionIdentifier = "unnamed";
   }
 
+  var lineBreakRE = /\r(\n?)/g;
+
   var rawFunctionText = "function " + escapedFunctionIdentifier + "(" +
     argumentNames.join(", ") +
     ") {\r\n" +
-    body +
+    "  " + body.replace(lineBreakRE, "\r\n  ") +
     "\r\n};\r\n";
 
-  var lineBreakRE = /\r(\n?)/g;
-
   rawFunctionText = 
-    uriPrefix + strictPrefix + 
-    rawFunctionText.replace(lineBreakRE, "\r\n    ") + 
-    "    return " + escapedFunctionIdentifier + ";\r\n";
+    strictPrefix + 
+    "  " + rawFunctionText.replace(lineBreakRE, "\r\n  ") +
+    "return " + escapedFunctionIdentifier + ";\r\n"
+    + uriSuffix;
 
   var result = null, keys = null;
 
@@ -7888,9 +7890,9 @@ JSIL.MethodSignature.prototype.$MakeInlineCacheBody = function (callMethodName, 
   var emitMissingMethodCheck = function (result, methodExpression, methodName, indentation) {
     var errMethod =
       indentation + "  " +
-      (callMethodName === "CallStatic")
+      ((callMethodName === "CallStatic")
         ? "this.$StaticMethodNotFound("
-        : "this.$MethodNotFound(";
+        : "this.$MethodNotFound(");
 
     result.push(indentation + "if (!" + methodExpression + ")");
     if (thisReferenceArg !== methodLookupArg)
@@ -7944,6 +7946,7 @@ JSIL.MethodSignature.prototype.$MakeInlineCacheBody = function (callMethodName, 
       body.push(indentation + "var methodReference = " + methodName + ";");    
       body.push(indentation + "if (!methodReference) {");
       body.push(indentation + "  methodReference = fallbackMethod(this.typeObject, this, thisReference);");
+      emitMissingMethodCheck(body, "methodReference", methodKeyToken, indentation + "  ");
       if (shouldEmitCacheMissInvocation) {
         body.push(indentation + "} else {");
         emitCacheMissInvocation(indentation + "  ");
@@ -7957,7 +7960,7 @@ JSIL.MethodSignature.prototype.$MakeInlineCacheBody = function (callMethodName, 
         body, "methodReference.call", "thisReference", 
         (!!returnType) ? "return " : "", 
         argumentTypes, genericArgumentNames,
-        false, indentation + "  "
+        false, indentation
       );
     } else {
       if (shouldEmitCacheMissInvocation) {
