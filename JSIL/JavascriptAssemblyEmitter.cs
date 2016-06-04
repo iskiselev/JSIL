@@ -710,9 +710,8 @@ namespace JSIL {
                 try
                 {
                     Formatter.MethodSignature(invokeMethod,
-                                           typeInfo.MethodSignatures.GetOrCreateFor("Invoke").First(),
+                                           typeInfo.MethodSignatures.GetOrCreateFor("Invoke").First().Item2,
                                            astEmitter.ReferenceContext);
-
                 }
                 finally
                 {

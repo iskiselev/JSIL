@@ -820,7 +820,7 @@ namespace JSIL.Internal {
 
                 // Register method in upper hierarchy
                 foreach (var nms in DeferredMethodSignatureSetUpdates) {
-                    if (!nms.MethodInfo.IsVirtual || nms.MethodInfo.Member.IsNewSlot) {
+                    if (!nms.MethodInfo.IsVirtual || nms.MethodInfo.IsNewSlot) {
                         var set = ms.GetOrCreateFor(nms.Name);
                         set.Add(nms);
                     }
@@ -829,7 +829,7 @@ namespace JSIL.Internal {
                 // Register method from upper hierarchy
                 if (t != this) {
                     foreach (var nms in t.DeferredMethodSignatureSetUpdates) {
-                        if (!nms.MethodInfo.IsVirtual || nms.MethodInfo.Member.IsNewSlot)
+                        if (!nms.MethodInfo.IsVirtual || nms.MethodInfo.IsNewSlot)
                         {
                             var set = MethodSignatures.GetOrCreateFor(nms.Name);
                             set.Add(nms);
@@ -1027,9 +1027,10 @@ namespace JSIL.Internal {
             return ca.AttributeType.FullName == "JSIL.Proxy.JSNeverInherit";
         }
 
-        protected bool BeforeAddProxyMember<T> (ProxyInfo proxy, T member, out IMemberInfo result, ICustomAttributeProvider owningMember = null)
+        protected bool BeforeAddProxyMember<T> (ProxyInfo proxy, T member, out IMemberInfo result, out bool isReplaced, ICustomAttributeProvider owningMember = null)
             where T : MemberReference, ICustomAttributeProvider
         {
+            isReplaced = false;
             var identifier = MemberIdentifier.New(this.Source, member);
 
             if (member.CustomAttributes.Any(ShouldNeverInherit)) {
@@ -1054,7 +1055,7 @@ namespace JSIL.Internal {
 
                     proxy.MemberReplacedTable.TryAdd(identifier, true);
 
-                    Members.TryRemove(identifier, out result);
+                    isReplaced |= Members.TryRemove(identifier, out result);
                 } else {
                     throw new ArgumentException(String.Format(
                         "Member '{0}' not found", member.Name
@@ -1062,37 +1063,46 @@ namespace JSIL.Internal {
                 }
             }
 
-            result = null;
             return false;
         }
 
         protected IMemberInfo AddProxyMember (ProxyInfo proxy, MethodDefinition method) {
             IMemberInfo result;
-            if (BeforeAddProxyMember(proxy, method, out result))
+            if (method.Name == "Method1") {
+                
+            }
+            bool isReplaced;
+            if (BeforeAddProxyMember(proxy, method, out result, out isReplaced))
                 return result;
 
-            return AddMember(method, proxy);
+            return AddMember(method, proxy, isReplaced);
         }
 
         protected IMemberInfo AddProxyMember (ProxyInfo proxy, MethodDefinition method, PropertyInfo owningProperty) {
             IMemberInfo result;
-            if (BeforeAddProxyMember(proxy, method, out result, owningProperty.Member))
+            bool isReplaced;
+
+            if (BeforeAddProxyMember(proxy, method, out result, out isReplaced, owningProperty.Member))
                 return result;
 
-            return AddMember(method, owningProperty, proxy);
+            return AddMember(method, owningProperty, proxy, isReplaced);
         }
 
         protected IMemberInfo AddProxyMember (ProxyInfo proxy, MethodDefinition method, EventInfo owningEvent) {
             IMemberInfo result;
-            if (BeforeAddProxyMember(proxy, method, out result, owningEvent.Member))
+            bool isReplaced;
+
+            if (BeforeAddProxyMember(proxy, method, out result, out isReplaced, owningEvent.Member))
                 return result;
 
-            return AddMember(method, owningEvent, proxy);
+            return AddMember(method, owningEvent, proxy, isReplaced);
         }
 
         protected IMemberInfo AddProxyMember (ProxyInfo proxy, FieldDefinition field) {
             IMemberInfo result;
-            if (BeforeAddProxyMember(proxy, field, out result))
+            bool isReplaced;
+
+            if (BeforeAddProxyMember(proxy, field, out result, out isReplaced))
                 return result;
 
             var fi = AddMember(field, proxy);
@@ -1103,7 +1113,9 @@ namespace JSIL.Internal {
 
         protected IMemberInfo AddProxyMember (ProxyInfo proxy, PropertyDefinition property) {
             IMemberInfo result;
-            if (BeforeAddProxyMember(proxy, property, out result))
+            bool isReplaced;
+
+            if (BeforeAddProxyMember(proxy, property, out result, out isReplaced))
                 return result;
 
             return AddMember(property, proxy);
@@ -1111,7 +1123,9 @@ namespace JSIL.Internal {
 
         protected IMemberInfo AddProxyMember (ProxyInfo proxy, EventDefinition evt) {
             IMemberInfo result;
-            if (BeforeAddProxyMember(proxy, evt, out result))
+            bool isReplaced;
+
+            if (BeforeAddProxyMember(proxy, evt, out result, out isReplaced))
                 return result;
 
             return AddMember(evt, proxy);
@@ -1204,7 +1218,7 @@ namespace JSIL.Internal {
             return false;
         }
 
-        protected MethodInfo AddMember (MethodDefinition method, PropertyInfo property, ProxyInfo sourceProxy = null) {
+        protected MethodInfo AddMember (MethodDefinition method, PropertyInfo property, ProxyInfo sourceProxy = null, bool isReplacement = false) {
             IMemberInfo result;
             var identifier = new MemberIdentifier(this.Source, method);
             if (Members.TryGetValue(identifier, out result))
@@ -1219,16 +1233,17 @@ namespace JSIL.Internal {
             if (!Members.TryAdd(identifier, result))
                 throw new InvalidOperationException();
 
-            if (method.IsStatic || method.IsConstructor) {
-                DeferredStaticMethodSignatureSetUpdates.Add(((MethodInfo)result).NamedSignature);
-            }
-            else {
-                DeferredMethodSignatureSetUpdates.Add(((MethodInfo)result).NamedSignature);
+            if (!isReplacement) {
+                if (method.IsStatic || method.IsConstructor) {
+                    DeferredStaticMethodSignatureSetUpdates.Add(((MethodInfo) result).NamedSignature);
+                } else {
+                    DeferredMethodSignatureSetUpdates.Add(((MethodInfo) result).NamedSignature);
+                }
             }
             return (MethodInfo)result;
         }
 
-        protected MethodInfo AddMember (MethodDefinition method, EventInfo evt, ProxyInfo sourceProxy = null) {
+        protected MethodInfo AddMember (MethodDefinition method, EventInfo evt, ProxyInfo sourceProxy = null, bool isReplacement = false) {
             IMemberInfo result;
             var identifier = new MemberIdentifier(this.Source, method);
             if (Members.TryGetValue(identifier, out result))
@@ -1238,17 +1253,17 @@ namespace JSIL.Internal {
             if (!Members.TryAdd(identifier, result))
                 throw new InvalidOperationException();
 
-            if (method.IsStatic || method.IsConstructor) {
-                DeferredStaticMethodSignatureSetUpdates.Add(((MethodInfo)result).NamedSignature);
+            if (!isReplacement) {
+                if (method.IsStatic || method.IsConstructor) {
+                    DeferredStaticMethodSignatureSetUpdates.Add(((MethodInfo) result).NamedSignature);
+                } else {
+                    DeferredMethodSignatureSetUpdates.Add(((MethodInfo) result).NamedSignature);
+                }
             }
-            else {
-                DeferredMethodSignatureSetUpdates.Add(((MethodInfo)result).NamedSignature);
-            }
-
             return (MethodInfo)result;
         }
 
-        protected MethodInfo AddMember (MethodDefinition method, ProxyInfo sourceProxy = null) {
+        protected MethodInfo AddMember (MethodDefinition method, ProxyInfo sourceProxy = null, bool isReplacement = false) {
             IMemberInfo result;
             var identifier = new MemberIdentifier(this.Source, method);
             if (Members.TryGetValue(identifier, out result))
@@ -1260,11 +1275,13 @@ namespace JSIL.Internal {
 
             if (method.Name == ".cctor")
                 StaticConstructor = method;
-            if (method.IsStatic || method.IsConstructor) {
-                DeferredStaticMethodSignatureSetUpdates.Add(((MethodInfo)result).NamedSignature);
-            }
-            else {
-                DeferredMethodSignatureSetUpdates.Add(((MethodInfo)result).NamedSignature);
+
+            if (!isReplacement) {
+                if (method.IsStatic || method.IsConstructor) {
+                    DeferredStaticMethodSignatureSetUpdates.Add(((MethodInfo) result).NamedSignature);
+                } else {
+                    DeferredMethodSignatureSetUpdates.Add(((MethodInfo) result).NamedSignature);
+                }
             }
 
             return (MethodInfo)result;
@@ -1863,6 +1880,7 @@ namespace JSIL.Internal {
         public readonly bool IsGeneric;
         public readonly bool IsSealed;
         public readonly bool IsVirtual;
+        public readonly bool IsNewSlot;
         public readonly bool IsPInvoke;
 
         protected NamedMethodSignature _Signature = null;
@@ -1906,6 +1924,7 @@ namespace JSIL.Internal {
             IsGeneric = method.HasGenericParameters;
             IsSealed = method.IsFinal || method.DeclaringType.IsSealed;
             IsVirtual = method.IsVirtual;
+            IsNewSlot = method.IsNewSlot;
             IsPInvoke = method.IsPInvokeImpl;
         }
 
@@ -1928,6 +1947,7 @@ namespace JSIL.Internal {
             IsGeneric = method.HasGenericParameters;
             IsSealed = method.IsFinal || method.DeclaringType.IsSealed;
             IsVirtual = method.IsVirtual;
+            IsNewSlot = method.IsNewSlot;
             IsPInvoke = method.IsPInvokeImpl;
 
             if (property != null)
@@ -1953,6 +1973,7 @@ namespace JSIL.Internal {
             IsGeneric = method.HasGenericParameters;
             IsSealed = method.IsFinal || method.DeclaringType.IsSealed;
             IsVirtual = method.IsVirtual;
+            IsNewSlot = method.IsNewSlot;
             IsPInvoke = method.IsPInvokeImpl;
 
             if (evt != null)

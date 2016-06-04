@@ -192,12 +192,12 @@ namespace JSIL.Internal {
         }
     }
 
-    public class MethodSignatureSet : IDisposable, IEnumerable<MethodSignature> {
-        public struct SignatureEnumerator : IEnumerator<MethodSignature> {
+    public class MethodSignatureSet : IDisposable, IEnumerable<Tuple<TypeInfo, MethodSignature>> {
+        public struct SignatureEnumerator : IEnumerator<Tuple<TypeInfo,MethodSignature>> {
             private readonly string Name;
             private readonly IEnumerator<KeyValuePair<NamedMethodSignature, Count>> Enumerator;
 
-            private MethodSignature _Current;
+            private Tuple<TypeInfo, MethodSignature> _Current;
 
             internal SignatureEnumerator (IEnumerator<KeyValuePair<NamedMethodSignature, Count>> enumerator, string name) {
                 Enumerator = enumerator;
@@ -205,7 +205,7 @@ namespace JSIL.Internal {
                 _Current = null;
             }
 
-            public MethodSignature Current {
+            public Tuple<TypeInfo, MethodSignature> Current {
                 get { return _Current; }
             }
 
@@ -221,7 +221,7 @@ namespace JSIL.Internal {
                 while (Enumerator.MoveNext()) {
                     var current = Enumerator.Current.Key;
                     if (current.Name == Name) {
-                        _Current = current.Signature;
+                        _Current = Tuple.Create(current.Source, current.Signature);
                         return true;
                     }
                 }
@@ -255,7 +255,7 @@ namespace JSIL.Internal {
             return new SignatureEnumerator(Counts.GetEnumerator(), Name);
         }
 
-        IEnumerator<MethodSignature> IEnumerable<MethodSignature>.GetEnumerator () {
+        IEnumerator<Tuple<TypeInfo, MethodSignature>> IEnumerable<Tuple<TypeInfo, MethodSignature>>.GetEnumerator () {
             return GetEnumerator();
         }
 

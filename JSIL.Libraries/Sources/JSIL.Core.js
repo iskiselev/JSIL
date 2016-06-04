@@ -3058,6 +3058,15 @@ JSIL.FixupInterfaces = function (publicInterface, typeObject) {
   if (typeObject.IsInterface)
     return;
 
+  var filterDescriptorsBasedOnType = function (matchingMethods, typeObject) {
+    var filtred = [];
+    for (var i = 0; i < matchingMethods.length; i++) {
+      if (matchingMethods[i]._typeObject == typeObject)
+        filtred.push(matchingMethods[i]);
+    }
+    return filtred;
+  }
+
   var types = JSIL.GetTypeAndBases(typeObject);
   var interfaces = [];
   for (var i = 0; i < types.length; i++) {
@@ -3211,6 +3220,8 @@ JSIL.FixupInterfaces = function (publicInterface, typeObject) {
             expectedInstanceName, parameterTypes, returnType
           );
 
+          matchingMethods = filterDescriptorsBasedOnType(matchingMethods, typeObject);
+
           // HACK: If this interface method was renamed at compile time,
           //  look for unqualified instance methods using the old name.
           if ((originalName !== null) && (matchingMethods.length === 0)) {
@@ -3220,6 +3231,8 @@ JSIL.FixupInterfaces = function (publicInterface, typeObject) {
             matchingMethods = typeObject.$GetMatchingInstanceMethods(
               originalName, parameterTypes, returnType
             );
+
+            matchingMethods = filterDescriptorsBasedOnType(matchingMethods, typeObject);
           }
 
           if (iface != typeObject) {
@@ -3237,6 +3250,7 @@ JSIL.FixupInterfaces = function (publicInterface, typeObject) {
                   break;
                 }
                 var matchingMethodsInTestType = types[k].$GetMatchingInstanceMethods(expectedInstanceName, parameterTypes, returnType);
+                matchingMethodsInTestType = filterDescriptorsBasedOnType(matchingMethodsInTestType, types[k]);
 
                 var filtred = [];
                 for (var m = 0; m < matchingMethodsInTestType.length; m++) {
