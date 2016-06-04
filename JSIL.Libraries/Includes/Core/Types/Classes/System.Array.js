@@ -125,10 +125,20 @@ JSIL.MakeClass("System.Object", "System.Array", true, [], function ($) {
         }
       );
 
+      $.Method({ Static: false, Public: true, Virtual: true }, "get_Count",
+        new JSIL.MethodSignature($.Int32, [], []),
+        function get_Count() {
+          return this.length;
+        }
+      );
+
       $.ImplementInterfaces(
         $jsilcore.TypeRef("System.Collections.Generic.IEnumerable`1", [elementTypeObject]),
         $jsilcore.TypeRef("System.Collections.Generic.ICollection`1", [elementTypeObject]),
-        $jsilcore.TypeRef("System.Collections.Generic.IList`1", [elementTypeObject])
+        $jsilcore.TypeRef("System.Collections.Generic.IList`1", [elementTypeObject]),
+        $jsilcore.TypeRef("System.Collections.IEnumerable"),
+        $jsilcore.TypeRef("System.Collections.ICollection"),
+        $jsilcore.TypeRef("System.Collections.IList")
       );
     });
 
@@ -275,6 +285,13 @@ JSIL.MakeClass("System.Object", "System.Array", true, [], function ($) {
         JSIL.MethodSignature.Return($.Int32),
         function get_Length() {
           return this.Items.length;
+        }
+      );
+
+      $.Method({ Static: false, Public: true, Virtual: true }, "get_Count",
+        new JSIL.MethodSignature($.Int32, [], []),
+        function get_Count() {
+          return this.length;
         }
       );
 
