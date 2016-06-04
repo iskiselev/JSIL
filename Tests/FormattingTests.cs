@@ -1021,10 +1021,9 @@ namespace JSIL.Tests {
                     generatedJs.Contains("bas.MethodWithParameter2();"),
                     "Base.MethodWithParameter2 should not used fast dispatcher as it may be hidden by Derived.MethodWithParameter2");
 
-                // IK: I believe it's incorrect.
-                //Assert.IsFalse(
-                //    generatedJs.Contains("derived.Method();"),
-                //    "Derived.Method should not used fast dispatcher as it is hidden by Base.Method");
+                Assert.IsFalse(
+                    generatedJs.Contains("derived.Method();"),
+                    "Derived.Method should not used fast dispatcher as it is hidden by Base.Method");
                 Assert.IsFalse(
                     generatedJs.Contains("derived.MethodWithParameter1();"),
                     "Derived.MethodWithParameter1 should not used fast dispatcher as it is hidden by Base.MethodWithParameter1");

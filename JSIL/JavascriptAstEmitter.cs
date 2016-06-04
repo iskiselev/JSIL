@@ -2284,7 +2284,7 @@ namespace JSIL {
                         continue;
                     }
 
-                    if (!TypeUtil.TypesAreAssignable(method.Source, method.DeclaringType.Definition, typedSignature.Item1.Definition)) {
+                    if (!sameTypeOnly && !TypeUtil.TypesAreAssignable(method.Source, method.DeclaringType.Definition, typedSignature.Item1.Definition) && signature.Equals(method.Signature)) {
                         continue;
                     }
 
