@@ -4322,18 +4322,18 @@ JSIL.$ApplyMemberHiding = function (typeObject, memberList, resolveContext) {
         rhs._data.isPlaceholder ? 1 : 0
       );
 
-    // Non-externals override externals.
-    if (result === 0)
-      result = JSIL.CompareValues(
-        lhs._data.isExternal ? 1 : 0,
-        rhs._data.isExternal ? 1 : 0
-      );
-
     // A derived type's methods override inherited methods.
     if (result === 0)
       result = -JSIL.CompareValues(
         lhs._typeObject.__InheritanceDepth__, 
         rhs._typeObject.__InheritanceDepth__
+      );
+
+    // Non-externals override externals.
+    if (result === 0)
+      result = JSIL.CompareValues(
+        lhs._data.isExternal ? 1 : 0,
+        rhs._data.isExternal ? 1 : 0
       );
 
     return result;
