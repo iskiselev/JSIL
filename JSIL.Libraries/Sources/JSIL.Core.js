@@ -8560,8 +8560,8 @@ JSIL.InterfaceMethod.Register = function (target, typeObject, escapedName, mangl
   }
 }
 
-JSIL.SetLazyValueProperty(JSIL.InterfaceMethod.prototype, "Call", function () { return this.$MakeCallMethod(); }, true);
-JSIL.SetLazyValueProperty(JSIL.InterfaceMethod.prototype, "CallNonVirtual", function () { return this.$MakeCallNonVirtualMethod(); }, true);
+JSIL.SetLazyValueProperty(JSIL.InterfaceMethod.prototype, "Call", function () { return this.$MakeCallMethod(true); }, true);
+JSIL.SetLazyValueProperty(JSIL.InterfaceMethod.prototype, "CallNonVirtual", function () { return this.$MakeCallMethod(false); }, true);
 
 JSIL.InterfaceMethod.prototype.Rebind = function (newTypeObject, newSignature) {
   if (this.__OfCache__ == null) {
@@ -8724,38 +8724,18 @@ JSIL.InterfaceMethod.prototype.LookupVariantMethodKey = function (thisReference,
   return signature != null ? signature.GetNamedKey(this.qualifiedName, true) : this.methodKey;
 };
 
-JSIL.InterfaceMethod.prototype.$MakeCallMethod = function () {
+JSIL.InterfaceMethod.prototype.$MakeCallMethod = function (isVirtual) {
   if (this.signature == null) {
-    var imethod = this;
-    return function (thisObject, genericArgs) {
-      var key = this.variantGenericArguments.length > 0 ? imethod.LookupVariantMethodKey(thisObject) : this.qualifiedName;
-      var target = thisObject[key];
-      var targetFunctionArgs = Array.prototype.slice.call(arguments, 2);
-      if (genericArgs) {
-        var resolvedTarget = target.apply(thisObject, genericArgs);
-        return resolvedTarget(targetFunctionArgs);
-      } else {
-        return target.apply(thisObject, targetFunctionArgs);
-      }
-    }
+    return JSIL.InterfaceMethod.$MakeCallRuntimeDispatchMethod(this, true);
   } else if (this.typeObject.__IsClosed__ && this.signature.IsClosed) {
     var callType = 
-      (this.variantGenericArguments.length > 0)
+      (this.variantGenericArguments.length > 0) && isVirtual
         ? "CallVariantInterface"
         : "CallInterface";
 
-    var fallbackMethod = this.fallbackMethod;
-    Object.defineProperty(
-      this, "fallbackMethod",
-      { 
-        value: fallbackMethod,
-        writable: false,
-        writeable: false,
-        configurable: false
-      }
-    );
+    var methodKey = isVirtual ? this.methodKey : "i$" + this.methodKey;
 
-    return this.signature.$MakeCallMethod(callType, this.methodKey, fallbackMethod);
+    return this.signature.$MakeCallMethod(callType, methodKey, this.fallbackMethod);
   } else {
     return function () {
       JSIL.RuntimeError("Cannot invoke method '" + this.methodName + "' of open generic interface '" + this.typeObject.__FullName__ + "'");
@@ -8763,28 +8743,21 @@ JSIL.InterfaceMethod.prototype.$MakeCallMethod = function () {
   }
 };
 
-JSIL.InterfaceMethod.prototype.$MakeCallNonVirtualMethod = function () {
-  if (this.signature == null) {
-    var imethod = this;
-    return function (thisObject, genericArgs) {
-      var key = this.variantGenericArguments.length > 0 ? imethod.LookupVariantMethodKey(thisObject) : this.qualifiedName;
-      var target = thisObject[key];
-      var targetFunctionArgs = Array.prototype.slice.call(arguments, 2);
-      if (genericArgs) {
-        var resolvedTarget = target.apply(thisObject, genericArgs);
-        return resolvedTarget(targetFunctionArgs);
-      } else {
-        return target.apply(thisObject, targetFunctionArgs);
-      }
-    }
-  } else if (this.typeObject.__IsClosed__ && this.signature.IsClosed) {
-    return this.signature.$MakeCallMethod("CallInterface", "i$" + this.methodKey, this.fallbackMethod);
-  } else {
-    return function () {
-      JSIL.RuntimeError("Cannot invoke method '" + this.methodName + "' of open generic interface '" + this.typeObject.__FullName__ + "'");
-    };
+JSIL.InterfaceMethod.$MakeCallRuntimeDispatchMethod = function (imethod, isVirtual) {
+  // Move method creation from signature to some helper class and use it here.
+  var key = imethod.variantGenericArguments.length > 0 ? imethod.LookupVariantMethodKey(thisObject) : imethod.qualifiedName;
+  if (!isVirtual) {
+    key = "i$" + key;
   }
-};
+  var target = thisObject[key];
+  var targetFunctionArgs = Array.prototype.slice.call(arguments, 2);
+  if (genericArgs) {
+    var resolvedTarget = target.apply(thisObject, genericArgs);
+    return resolvedTarget(targetFunctionArgs);
+  } else {
+    return target.apply(thisObject, targetFunctionArgs);
+  }
+}
 
 JSIL.InterfaceMethod.prototype.toString = function () {
   // HACK: This makes it possible to do
