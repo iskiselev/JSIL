@@ -1471,7 +1471,7 @@ namespace JSIL {
             var oldCurrentMethod = Output.CurrentMethod;
 
             if (function.Method != null) {
-                Output.CurrentMethod = function.Definition;
+                Output.CurrentMethod = function.Method.Method.Member;
             } else {
                 Output.CurrentMethod = null;
             }

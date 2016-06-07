@@ -1656,7 +1656,7 @@ namespace JSIL {
 
                     defaultValue = new JSFunctionExpression(
                         // No method or variables. This could break things.
-                        null, null, null, 
+                        null, null, 
                         new JSVariable[] { 
                             new JSParameter(fieldSelfIdentifier.Identifier, fieldSelfIdentifier.IdentifierType, null) 
                         },

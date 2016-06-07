@@ -32,26 +32,15 @@ namespace JSIL.Ast {
         public string DisplayName = null;
 
         public JSFunctionExpression (
-            JSMethod method, MethodDefinition methodDef, Dictionary<string, JSVariable> allVariables,
+            JSMethod method, Dictionary<string, JSVariable> allVariables,
             JSVariable[] parameters, JSBlockStatement body,
             MethodTypeFactory methodTypes
         ) {
-            if ((method == null && methodDef != null) || (method != null && method.Reference != methodDef)) {
-                throw new ArgumentException("methodDef should be part of passed method", "methodDef");
-            }
             Method = method;
             AllVariables = allVariables;
             Parameters = parameters;
             Body = body;
             MethodTypes = methodTypes;
-        }
-
-        public MethodDefinition Definition {
-            get {
-                if (Method == null)
-                    return null;
-                return (MethodDefinition)Method.Reference;
-            }
         }
 
         public override bool Equals (object obj) {

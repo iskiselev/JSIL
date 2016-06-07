@@ -101,7 +101,6 @@ namespace JSIL {
             MakePopulatedCacheEntry = (id, args) => {
                 var result = new JSFunctionExpression(
                     new JSMethod(args.Method, args.Info, MethodTypes),
-                    args.Method,
                     args.Translator.Variables,
                     args.Parameters,
                     args.Body,
