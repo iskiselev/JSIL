@@ -191,9 +191,9 @@ namespace JSIL.Ast {
     }
 
     public class JSTypeReference : JSType {
-        public readonly TypeReference Context;
+        public readonly TypeDefinition Context;
 
-        public JSTypeReference (TypeReference type, TypeReference context)
+        public JSTypeReference (TypeReference type, TypeDefinition context)
             : base(type) {
 
             Context = context;
@@ -307,6 +307,10 @@ namespace JSIL.Ast {
                 throw new ArgumentNullException("reference");
             if (method == null)
                 throw new ArgumentNullException("method");
+
+            if (!(reference is MethodDefinition)) {
+                Console.WriteLine("!");
+            }
 
             Reference = reference;
             Method = method;
@@ -740,7 +744,7 @@ namespace JSIL.Ast {
     public class JSIndirectVariable : JSVariable {
         public readonly IDictionary<string, JSVariable> Variables;
 
-        public JSIndirectVariable (IDictionary<string, JSVariable> variables, string identifier, MethodReference function)
+        public JSIndirectVariable (IDictionary<string, JSVariable> variables, string identifier, MethodDefinition function)
             : base(identifier, variables[identifier].IdentifierType, function) {
 
             Variables = variables;
