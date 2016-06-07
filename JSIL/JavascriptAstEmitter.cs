@@ -2390,21 +2390,11 @@ namespace JSIL {
                         if (hasArguments)
                             Output.Comma();
                     } else {
-                        SignatureCacher.WriteInterfaceMemberToOutput(
+                        SignatureCacher.WriteQualifiedSignatureToOutput(
                             Output, this, Stack.OfType<JSFunctionExpression>().FirstOrDefault(),
                             jsm, invocation.Method,
                             ReferenceContext
                             );
-
-                        if (!CanUseFastOverloadDispatch(method, true)) {
-                            Output.Dot();
-                            Output.WriteRaw("Of(");
-                            SignatureCacher.WriteSignatureToOutput(
-                                Output, Stack.OfType<JSFunctionExpression>().FirstOrDefault(),
-                                jsm.Reference, method.Signature, ReferenceContext, false
-                                );
-                            Output.WriteRaw(")");
-                        }
 
                         Output.Dot();
                         Output.WriteRaw(invocation.ExplicitThis ? "CallNonVirtual" : "Call");
@@ -2464,11 +2454,10 @@ namespace JSIL {
                         if (hasArguments)
                             Output.Comma();
                     } else if (invocation.ExplicitThis) {
-                        SignatureCacher.WriteInterfaceMemberToOutput(
+                        SignatureCacher.WriteQualifiedSignatureToOutput(
                             Output, this, Stack.OfType<JSFunctionExpression>().FirstOrDefault(),
                             jsm, invocation.Method,
-                            ReferenceContext
-                            );
+                            ReferenceContext);
                         Output.Dot();
                         Output.WriteRaw("CallNonVirtual");
 
