@@ -414,7 +414,8 @@ namespace JSIL.Transforms {
             var rewritenInfo = GenericTypesRewriter.NormalizedQualified(jsm.Reference, methodInfo.Signature, isConstructor);
 
             var memberRecord = new CachedInterfaceMemberRecord(
-                rewritenInfo.CacheRecord.Item1, jsm.Identifier);
+                rewritenInfo.CacheRecord.Item1, jsm.Identifier,
+                rewritenInfo.RewritedGenericParameters.Length);
 
             var signatureRecord = new CachedSignatureRecord(
                 jsm.Reference,
