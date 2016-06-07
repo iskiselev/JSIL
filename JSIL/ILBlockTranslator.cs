@@ -312,7 +312,7 @@ namespace JSIL {
             return false;
         }
 
-        protected JSVariable DeclareVariable (ILVariable variable, MethodReference function) {
+        protected JSVariable DeclareVariable (ILVariable variable, MethodDefinition function) {
             if (variable.Name.StartsWith("<>c__")) {
                 return DeclareVariableInternal(JSClosureVariable.New(variable, function));
             }
