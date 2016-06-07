@@ -308,10 +308,6 @@ namespace JSIL.Ast {
             if (method == null)
                 throw new ArgumentNullException("method");
 
-            if (!(reference is MethodDefinition)) {
-                Console.WriteLine("!");
-            }
-
             Reference = reference;
             Method = method;
             MethodTypes = methodTypes;
