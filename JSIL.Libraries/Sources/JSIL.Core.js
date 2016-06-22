@@ -562,6 +562,69 @@ $jsilcore.ArrayNull = [];
 $jsilcore.FunctionNotInitialized = function () { throw new Error("FunctionNotInitialized"); };
 $jsilcore.FunctionNull = function () { };
 
+JSIL.FunctionHolder = function FunctionHolder(bodyGenerator) {
+  this.bodyGenerator = bodyGenerator;
+  this.func = null;
+  this.getFunc = function () {
+    this.func = this.bodyGenerator();
+    this.getFunc = function () { return this.func; }
+    this.bodyGenerator = null;
+    return this.func;
+  }
+}
+
+JSIL.FunctionHolder.prototype = {
+  Register: function Register(target, property){
+    var func = this;
+    Object.defineProperty(target, property,
+    {
+      configurable: true,
+      get: function () {
+        var result = func.getFunc();
+        Object.defineProperty(target, property, {
+          writable: false,
+          configurable: false,
+          value: result
+        });
+        return result;
+      }
+    });
+  }
+}
+
+/*Object.defineProperty(JSIL, "$Types", {
+  writable: false,
+  configurable: false,
+  value: Object.create(null)
+});
+
+function toFastProperties(obj) {
+  function f() { }
+  f.prototype = obj;
+  new f();
+  return;
+  eval(obj);
+};
+
+JSIL.MemoizeType = function MemoizeType(valueType) {
+  if (typeof (valueType) === "undefined")
+    JSIL.RuntimeError("Memoized value is undefined");
+
+  //JSIL.$Types.set(valueType.__TypeId__, valueType);
+
+  Object.defineProperty(JSIL.$Types, valueType.__TypeId__, {
+      writable: false,
+      configurable: false,
+      value: valueType
+  });
+
+  toFastProperties(JSIL.$Types);
+
+  return function MemoizedValue() {
+    return valueType;
+  };
+};*/
+
 JSIL.Memoize = function Memoize (value) {
   if (typeof (value) === "undefined")
     JSIL.RuntimeError("Memoized value is undefined");
@@ -7334,12 +7397,15 @@ JSIL.InterfaceBuilder.prototype.Method = function (_descriptor, methodName, sign
   var memberBuilder = new JSIL.MemberBuilder(this.context);
 
   if (!this.typeObject.IsInterface) {
-    if (typeof (fn) !== "function")
-      JSIL.RuntimeError("Method expected a function as 4th argument when defining '" + methodName + "'");
+    if (fn instanceof JSIL.FunctionHolder) {
+      fn.Register(descriptor.Target, mangledName, fn);
+    }
+    else {
+      if (typeof (fn) !== "function")
+        JSIL.RuntimeError("Method expected a function as 4th argument when defining '" + methodName + "'");
 
-    var fullName = this.namespace + "." + methodName;
-
-    JSIL.SetValueProperty(descriptor.Target, mangledName, fn);
+      JSIL.SetValueProperty(descriptor.Target, mangledName, fn);
+    }
   }
 
   var isConstructor = (descriptor.EscapedName === "_ctor");
