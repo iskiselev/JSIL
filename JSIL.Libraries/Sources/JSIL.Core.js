@@ -4524,6 +4524,13 @@ JSIL.$CreateMethodMembranes = function (typeObject, publicInterface) {
     return function () { return value; };
   };
 
+  var makeReturnerForHolder = function (originalHolder, publicInterface, key) {
+    return function () {
+      originalHolder.Register(publicInterface, key);
+      return publicInterface[key];
+    };
+  };
+
   var bindingFlags = $jsilcore.BindingFlags.$Flags("NonPublic", "Public");
   var methods = JSIL.GetMembersInternal(
     typeObject, bindingFlags, "$MethodOrConstructor"
@@ -4545,14 +4552,21 @@ JSIL.$CreateMethodMembranes = function (typeObject, publicInterface) {
 
     if (useMembrane) {
       var originalFunction = publicInterface[key];
-      if (typeof (originalFunction) !== "function") {
-        // throw new Error("No function with key '" + key + "' found");
-        continue;
+      if (originalFunction instanceof JSIL.FunctionHolder) {
+        JSIL.DefinePreInitMethod(
+          publicInterface, key, makeReturnerForHolder(originalFunction, publicInterface, key), maybeRunCctors
+        );
       }
+      else {
+        if (typeof (originalFunction) !== "function") {
+          // throw new Error("No function with key '" + key + "' found");
+          continue;
+        }
 
-      JSIL.DefinePreInitMethod(
-        publicInterface, key, makeReturner(originalFunction), maybeRunCctors
-      );
+        JSIL.DefinePreInitMethod(
+          publicInterface, key, makeReturner(originalFunction), maybeRunCctors
+        );
+      }
     }
   }
 };
@@ -7398,7 +7412,16 @@ JSIL.InterfaceBuilder.prototype.Method = function (_descriptor, methodName, sign
 
   if (!this.typeObject.IsInterface) {
     if (fn instanceof JSIL.FunctionHolder) {
-      fn.Register(descriptor.Target, mangledName, fn);
+      var useMembrane = descriptor.Static &&
+                          ($jsilcore.cctorKeys.indexOf(descriptor.Name) < 0) &&
+                          ($jsilcore.cctorKeys.indexOf(descriptor.EscapedName) < 0);
+
+      if (useMembrane) {
+        // Membrane will add aditional modification to function.
+        JSIL.SetValueProperty(descriptor.Target, mangledName, fn);
+      } else {
+        fn.Register(descriptor.Target, mangledName);
+      }
     }
     else {
       if (typeof (fn) !== "function")

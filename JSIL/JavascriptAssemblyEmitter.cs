@@ -1217,7 +1217,7 @@ namespace JSIL {
         }
 
         public void EmitCachedValues (IAstEmitter astEmitter, TypeExpressionCacher typeCacher, SignatureCacher signatureCacher, BaseMethodCacher baseMethodCacher) {
-            var cts = typeCacher.CachedTypes.Values.OrderBy((ct) => ct.Index).ToArray();
+            /*var cts = typeCacher.CachedTypes.Values.OrderBy((ct) => ct.Index).ToArray();
             if (cts.Length > 0) {
                 foreach (var ct in cts) {
                     Formatter.WriteRaw("var $T{0:X2} = function () ", ct.Index);
@@ -1229,7 +1229,7 @@ namespace JSIL {
                     Formatter.CloseBrace(false);
                     Formatter.Semicolon(true);
                 }
-            }
+            }*/
 
             var css = signatureCacher.Global.Signatures.OrderBy((cs) => cs.Value).ToArray();
             if (css.Length > 0) {
@@ -1422,7 +1422,7 @@ namespace JSIL {
                 }
             }
 
-            if ((cts.Length > 0) || (css.Length > 0))
+            if (/*(cts.Length > 0) || */(css.Length > 0))
                 Formatter.NewLine();
         }
 

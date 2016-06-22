@@ -5,6 +5,8 @@ using System.Text;
 using JSIL.Internal;
 
 namespace JSIL.Ast {
+    using Mono.Cecil;
+
     public class JSNullStatement : JSStatement {
         public override bool IsNull {
             get {
@@ -267,6 +269,67 @@ namespace JSIL.Ast {
                 "var {0}",
                 String.Join(", ", (from d in Declarations select String.Concat(d)).ToArray())
             ));
+        }
+    }
+
+    public class JSTypeCacheRecordVariableDeclarationStatement : JSVariableDeclarationStatement
+    {
+        public readonly int Index;
+        public readonly JSType Type;
+
+        public JSTypeCacheRecordVariableDeclarationStatement(int index, JSType type, TypeReference systemTypeReference)
+            : base(new JSBinaryOperatorExpression(
+                            JSOperator.Assignment,
+                            new JSRawOutputIdentifier(
+                                systemTypeReference,
+                                "$t{0:X2}", index
+                                ),
+                            type,
+                            systemTypeReference
+                            ))
+        {
+            Index = index;
+            Type = type;
+        }
+    }
+
+    public class JSQualifiedMethodCacheRecordVariableDeclarationStatement : JSVariableDeclarationStatement {
+        public readonly int Index;
+        public readonly JSQualifiedMethodCachedSignatureExpression Method;
+
+        public JSQualifiedMethodCacheRecordVariableDeclarationStatement(int index, JSQualifiedMethodCachedSignatureExpression method, TypeReference systemTypeReference)
+            : base(new JSBinaryOperatorExpression(
+                            JSOperator.Assignment,
+                            new JSRawOutputIdentifier(
+                                systemTypeReference,
+                                "$qs{0:X2}", index
+                                ),
+                            method,
+                            systemTypeReference
+                            ))
+        {
+            Index = index;
+            Method = method;
+        }
+    }
+
+    public class JSSignatureCacheRecordVariableDeclarationStatement : JSVariableDeclarationStatement {
+        public readonly int Index;
+        public readonly JSLocalCachedSignatureExpression Method;
+
+        public JSSignatureCacheRecordVariableDeclarationStatement(int index, JSLocalCachedSignatureExpression type, TypeReference systemTypeReference)
+            : base(new JSBinaryOperatorExpression(
+                            JSOperator.Assignment,
+                            new JSRawOutputIdentifier(
+                                systemTypeReference,
+                                "$s{0:X2}", index
+                                ),
+                            type,
+                            systemTypeReference
+                            ))
+        {
+            Index = index;
+            Method = type;
         }
     }
 

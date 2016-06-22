@@ -21,13 +21,61 @@ namespace JSIL.Transforms {
             }
         }
 
-        public readonly Dictionary<GenericTypeIdentifier, CachedTypeRecord> CachedTypes;
+        private readonly Stack<JSFunctionExpression> FunctionStack = new Stack<JSFunctionExpression>();
+        public readonly Dictionary<MemberIdentifier, Dictionary<GenericTypeIdentifier, CachedTypeRecord>> AllCachedTypes;
         public readonly TypeReference ThisType;
         private int NextID = 0;
 
-        public TypeExpressionCacher (TypeReference thisType) {
+        public TypeExpressionCacher (TypeInfoProvider typeInfo, TypeReference thisType) {
             ThisType = thisType;
-            CachedTypes = new Dictionary<GenericTypeIdentifier, CachedTypeRecord>();
+            AllCachedTypes = new Dictionary<MemberIdentifier, Dictionary<GenericTypeIdentifier, CachedTypeRecord>>(new MemberIdentifier.Comparer(typeInfo));
+        }
+
+        private Dictionary<GenericTypeIdentifier, CachedTypeRecord> GetCacheSet()
+        {
+            Dictionary<GenericTypeIdentifier, CachedTypeRecord> result;
+
+            var fn = FunctionStack.Peek();
+
+            var functionIdentifier = fn.Method.Method.Identifier;
+            if (!AllCachedTypes.TryGetValue(functionIdentifier, out result))
+                result = AllCachedTypes[functionIdentifier] = new Dictionary<GenericTypeIdentifier, CachedTypeRecord>();
+
+            return result;
+        }
+
+        public Dictionary<GenericTypeIdentifier, CachedTypeRecord> CachedTypes
+        {
+            get { return GetCacheSet(); }
+        }
+
+        public void VisitNode(JSFunctionExpression fe)
+        {
+            FunctionStack.Push(fe);
+
+            try
+            {
+                VisitChildren(fe);
+            }
+            finally
+            {
+                var functionIdentifier = fe.Method.Method.Identifier;
+                Dictionary<GenericTypeIdentifier, CachedTypeRecord> localSet;
+                if (AllCachedTypes.TryGetValue(functionIdentifier, out localSet))
+                {
+                    var trType = fe.Method.Reference.Module.TypeSystem.SystemType();
+
+                    int i = 0;
+                    foreach (var value in localSet.Values)
+                    {
+                        var stmt = new JSTypeCacheRecordVariableDeclarationStatement(value.Index, new JSType(value.Type), trType);
+
+                        fe.Body.Statements.Insert(i++, stmt);
+                    }
+                }
+
+                FunctionStack.Pop();
+            }
         }
 
         private JSCachedType GetCachedType (TypeReference type) {

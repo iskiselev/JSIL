@@ -394,7 +394,7 @@ namespace JSIL.Transforms {
         private CacheSet GetCacheSet (bool cacheLocally) {
             CacheSet result = Global;
 
-            if (cacheLocally && LocalCachingEnabled) {
+            /*if (cacheLocally && LocalCachingEnabled) {*/
                 var fn = FunctionStack.Peek();
                 if ((fn.Method == null) || (fn.Method.Method == null))
                     return Global;
@@ -402,7 +402,7 @@ namespace JSIL.Transforms {
                 var functionIdentifier = fn.Method.Method.Identifier;
                 if (!LocalCachedSets.TryGetValue(functionIdentifier, out result))
                     result = LocalCachedSets[functionIdentifier] = new CacheSet(UseMethodSignaturePerMethod);
-            }
+            //}
 
             return result;
         }
@@ -544,15 +544,16 @@ namespace JSIL.Transforms {
                     var trType = fe.Method.Reference.Module.TypeSystem.SystemType();
 
                     int i = 0;
+                    foreach (var kvp in localSet.QualifiedSignatures)
+                    {
+                        var record = kvp.Key;
+                        var stmt = new JSQualifiedMethodCacheRecordVariableDeclarationStatement(kvp.Value, new JSQualifiedMethodCachedSignatureExpression(trType, record.Signature.Method, record.Signature.Signature, record.Member.InterfaceMember), trType);
+                        fe.Body.Statements.Insert(i++, stmt);
+                    }
+
                     foreach (var kvp in localSet.Signatures) {
                         var record = kvp.Key;
-                        var stmt = new JSVariableDeclarationStatement(new JSBinaryOperatorExpression(
-                            JSOperator.Assignment,
-                            MakeRawOutputIdentifierForIndex(trType, kvp.Value, true),
-                            new JSLocalCachedSignatureExpression(trType, record.Method, record.Signature, record.IsConstructor),
-                            trType
-                        ));
-
+                        var stmt = new JSSignatureCacheRecordVariableDeclarationStatement(kvp.Value, new JSLocalCachedSignatureExpression(trType, record.Method, record.Signature, record.IsConstructor), trType);
                         fe.Body.Statements.Insert(i++, stmt);
                     }
 
@@ -649,8 +650,10 @@ namespace JSIL.Transforms {
             var rewrittenGenericParameters = rewritten.RewritedGenericParameters;
 
             var record = new CachedQualifiedSignatureRecord(methodRecord, signatureRecord, jsMethod.Method.IsStatic);
+            var functionIdentifier = enclosingFunction.Method.Method.Identifier;
+            CacheSet localSignatureSet = LocalCachedSets[functionIdentifier];
 
-            if (!Global.QualifiedSignatures.TryGetValue(record, out index)) {
+            if (!localSignatureSet.QualifiedSignatures.TryGetValue(record, out index)) {
                 WriteInterfaceMemberToOutput(
                     output, astEmitter,
                     enclosingFunction,
@@ -664,10 +667,10 @@ namespace JSIL.Transforms {
                 output.RPar();
                 //}
             } else {
-                output.WriteRaw("$QS{0:X2}", index);
-                output.LPar();
+                output.WriteRaw("$qs{0:X2}", index);
+                /*output.LPar();
                 output.CommaSeparatedList(rewrittenGenericParameters, referenceContext);
-                output.RPar();
+                output.RPar();*/
             }
         }
 

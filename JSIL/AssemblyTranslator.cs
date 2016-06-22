@@ -1189,7 +1189,7 @@ namespace JSIL {
             bool stubbed, JSRawOutputIdentifier dollar,
             ref int nextDisambiguatedId
         ) {
-            var typeCacher = new TypeExpressionCacher(typedef);
+            var typeCacher = new TypeExpressionCacher(TypeInfoProvider, typedef);
             var signatureCacher = new SignatureCacher(
                 TypeInfoProvider,
                 !Configuration.CodeGenerator.DisableGenericSignaturesLocalCache.GetValueOrDefault(false),

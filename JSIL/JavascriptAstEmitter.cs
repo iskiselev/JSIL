@@ -445,10 +445,7 @@ namespace JSIL {
 
         private void WritePossiblyCachedTypeIdentifier (TypeReference type, int? index) {
             if (index.HasValue) {
-                if (IncludeTypeParens.Peek())
-                    Output.WriteRaw("($T{0:X2}())", index.Value);
-                else
-                    Output.WriteRaw("$T{0:X2}()", index.Value);
+                Output.WriteRaw("$t{0:X2}", index.Value);
             } else
                 Output.Identifier(type, ReferenceContext, false);
         }
@@ -1196,12 +1193,7 @@ namespace JSIL {
         }
 
         public void VisitNode (JSCachedType cachedType) {
-            bool needParens = IncludeTypeParens.Peek();
-
-            if (needParens)
-                Output.WriteRaw("($T{0:X2}())", cachedType.Index);
-            else
-                Output.WriteRaw("$T{0:X2}()", cachedType.Index);
+            Output.WriteRaw("$t{0:X2}", cachedType.Index);
         }
 
         public void VisitNode (JSCachedTypeOfExpression cachedTypeOf) {
@@ -1432,39 +1424,106 @@ namespace JSIL {
         }
 
         public void VisitNode (JSFunctionExpression function) {
-            var oldCurrentMethod = Output.CurrentMethod;
+            Action writeBody = () => {
+                var temporaryVarCount = function.TemporaryVariableTypes.Count;
+                if (temporaryVarCount > 0) {
+                    Output.WriteRaw("var ");
+                    for (var i = 0; i < temporaryVarCount; i++) {
+                        Output.WriteRaw("$temp{0:X2}", i);
+
+                        if (i < (temporaryVarCount - 1))
+                            Output.WriteRaw(", ");
+                        else
+                            Output.Semicolon();
+                    }
+                }
+
+                Visit(function.Body);
+
+                if (Stack.OfType<JSFunctionExpression>().Count() <= 1)
+                    AssignedClosureVariableNames.Clear();
+            };
 
             if (function.Method != null) {
                 Output.CurrentMethod = function.Method.Method.Member;
+
+                Output.WriteRaw(string.Format("var {0} = new JSIL.FunctionHolder", Util.EscapeIdentifier(function.DisplayName)));
+                Output.LPar();
+                Output.OpenFunction(null, null);
+
+                var systemType = TypeSystem.SystemType();
+
+                var pairs = new List<JSPairExpression> {new JSPairExpression(new JSStringLiteral("$thisType"), new JSRawOutputIdentifier(systemType, "$thisType"))};
+                var cachedTypes = function.Body.Statements.OfType<JSTypeCacheRecordVariableDeclarationStatement>().ToList();
+                foreach (var cachedType in cachedTypes) {
+                    function.Body.Statements.Remove(cachedType);
+                    pairs.Add(new JSPairExpression(new JSStringLiteral(string.Format("$t{0:X2}", cachedType.Index)), cachedType.Type));
+                }
+
+                var cachedSignatures = function.Body.Statements.OfType<JSSignatureCacheRecordVariableDeclarationStatement>().ToList();
+                foreach (var cachedSignature in cachedSignatures) {
+                    function.Body.Statements.Remove(cachedSignature);
+                    pairs.Add(new JSPairExpression(new JSStringLiteral(string.Format("$s{0:X2}", cachedSignature.Index)), cachedSignature.Method));
+                }
+
+                var methods = function.Body.Statements.OfType<JSQualifiedMethodCacheRecordVariableDeclarationStatement>().ToList();
+                foreach (var cachedMethod in methods) {
+                    function.Body.Statements.Remove(cachedMethod);
+                    pairs.Add(new JSPairExpression(new JSStringLiteral(string.Format("$qs{0:X2}", cachedMethod.Index)), cachedMethod.Method));
+                }
+
+                Output.WriteRaw("return JSIL.CreateNamedFunction");
+                Output.LPar();
+                Visit(new JSStringLiteral(function.DisplayName));
+                Output.Comma();
+                Output.OpenBracket();
+                Output.CommaSeparatedList(function.Parameters.Select(it => it.Identifier), ReferenceContext, ListValueType.Primitive);
+                Output.CloseBracket();
+                Output.Comma();
+                Output.WriteRaw("`");
+                Output.NewLine();
+
+                foreach (var cachedMethod in methods) {
+                    Output.WriteRaw("var $qs{0:X2}key = \"${{", cachedMethod.Index);
+                    Visit(cachedMethod.Method);
+                    Output.Dot();
+                    Output.WriteRaw(cachedMethod.Method.Reference.HasThis ? "methodKey" : "methodNonQualifiedKey");
+                    Output.WriteRaw("}\"");
+                    Output.Semicolon();
+
+                    if (cachedMethod.Method.Reference.HasThis) {
+                        Output.WriteRaw("var $qs{0:X2}nonVirtualKey = \"${{", cachedMethod.Index);
+                        Visit(cachedMethod.Method);
+                        Output.Dot();
+                        Output.WriteRaw("methodKeyNonVirtual");
+                        Output.WriteRaw("}\"");
+                        Output.Semicolon();
+                    }
+                }
+                writeBody();
+
+                Output.WriteRaw("`");
+                Output.Comma();
+                Visit(new JSObjectExpression(pairs.ToArray()));
+                Output.RPar();
+                Output.Semicolon();
+
+                Output.CloseBrace(false);
+                Output.RPar();
+
+                Output.CurrentMethod = null;
             } else {
                 Output.CurrentMethod = null;
+
+                Output.OpenFunction(
+                    function.DisplayName,
+                    (o) => o.WriteParameterList(function.Parameters)
+                    );
+                writeBody();
+
+                Output.CurrentMethod = null;
+                Output.CloseBrace(false);
             }
-
-            Output.OpenFunction(
-                function.DisplayName,
-                (o) => o.WriteParameterList(function.Parameters) 
-            );
-
-            var temporaryVarCount = function.TemporaryVariableTypes.Count;
-            if (temporaryVarCount > 0) {
-                Output.WriteRaw("var ");
-                for (var i = 0; i < temporaryVarCount; i++) {
-                    Output.WriteRaw("$temp{0:X2}", i);
-
-                    if (i < (temporaryVarCount - 1))
-                        Output.WriteRaw(", ");
-                    else
-                        Output.Semicolon();
-                }
-            }
-
-            Visit(function.Body);
-
-            if (Stack.OfType<JSFunctionExpression>().Count() <= 1)
-                AssignedClosureVariableNames.Clear();
-
-            Output.CloseBrace(false);
-            Output.CurrentMethod = oldCurrentMethod;
         }
 
         public void VisitNode (JSSwitchStatement swtch) {
@@ -2351,8 +2410,7 @@ namespace JSIL {
                             jsm,
                             ReferenceContext
                             );
-                        Output.Dot();
-                        Output.WriteRaw(isStatic ? "methodNonQualifiedKey" : (invocation.ExplicitThis ? "methodKeyNonVirtual" : "methodKey"));
+                        Output.WriteRaw(invocation.ExplicitThis && !isStatic ? "nonVirtualKey" : "key");
                         Output.CloseBracket();
 
                         Output.LPar();
@@ -2484,6 +2542,22 @@ namespace JSIL {
 
         public void VisitNode (JSLocalCachedSignatureExpression lcse) {
             Output.Signature(lcse.Reference, lcse.Signature, ReferenceContext, lcse.IsConstructor, false);
+        }
+
+        public void VisitNode(JSQualifiedMethodCachedSignatureExpression lcse)
+        {
+            Output.Identifier(lcse.Reference.DeclaringType, ReferenceContext, false);
+            Output.Dot();
+            Output.Identifier(!lcse.Reference.HasThis ? "$StaticMethods" : "$Methods");
+            Output.Dot();
+            Output.Identifier(lcse.MemberName, EscapingMode.MemberIdentifier);
+            Output.Dot();
+            Output.Identifier("InterfaceMethod");
+            Output.Dot();
+            Output.WriteRaw("Of");
+            Output.LPar();
+            Output.Signature(lcse.Reference, lcse.Signature, ReferenceContext, false, false);
+            Output.RPar();
         }
 
         public void VisitNode (JSLocalCachedInterfaceMemberExpression lcime) {

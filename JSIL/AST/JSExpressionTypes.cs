@@ -3057,6 +3057,27 @@ namespace JSIL.Ast {
         }
     }
 
+    public class JSQualifiedMethodCachedSignatureExpression : JSExpression
+    {
+        public readonly TypeReference Type;
+        public readonly MethodReference Reference;
+        public readonly MethodSignature Signature;
+        public readonly string MemberName;
+
+        public JSQualifiedMethodCachedSignatureExpression(TypeReference type, MethodReference reference, MethodSignature signature, string memberName)
+        {
+            Type = type;
+            Reference = reference;
+            Signature = signature;
+            MemberName = memberName;
+        }
+
+        public override TypeReference GetActualType(TypeSystem typeSystem)
+        {
+            return Type;
+        }
+    }
+
     public class JSCachedInterfaceMemberExpression : JSExpression {
         public readonly int Index;
 
