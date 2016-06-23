@@ -902,7 +902,7 @@ namespace JSIL {
         }
 
         public void VisitNode (JSCachedMethod cachedMethod) {
-            Output.WriteRaw("$qs{0:X2}()", cachedMethod.Index);
+            Output.WriteRaw("$qs{0:X2}", cachedMethod.Index);
         }
 
         public void VisitNode (JSIdentifier identifier) {
@@ -1234,9 +1234,7 @@ namespace JSIL {
             {
                 ReferenceContext.Push();
                 ReferenceContext.InvokingMethod = moe.Method.Reference;
-                SignatureCacher.WriteQualifiedSignatureToOutput(
-                    Output, this, Stack.OfType<JSFunctionExpression>().FirstOrDefault(),
-                    moe.Method, ReferenceContext);
+                Visit(moe.Method);
             }
             finally
             {
@@ -1528,18 +1526,7 @@ namespace JSIL {
         }
 
         public void VisitNode (JSQualifiedMethodCacheRecord cacheRecord) {
-            Visit(cacheRecord.Method.CachedDeclaringType);
-            Output.Dot();
-            Output.Identifier(cacheRecord.Method.Method.IsStatic ? "$StaticMethods" : "$Methods");
-            Output.Dot();
-            Output.Identifier(cacheRecord.Method.GetNameForInstanceReference());
-            Output.Dot();
-            Output.Identifier("InterfaceMethod");
-            Output.Dot();
-            Output.WriteRaw("Of");
-            Output.LPar();
-            WriteSignatureToOutput(output, enclosingFunction, jsMethod.Reference, jsMethod.Method.Signature, referenceContext, false);
-            output.RPar();
+            SignatureCacher.WriteQualifiedSignatureToOutput(Output, this, Stack.OfType<JSFunctionExpression>().FirstOrDefault(), cacheRecord.Method, ReferenceContext);
         }
 
         public void VisitNode (JSSwitchStatement swtch) {

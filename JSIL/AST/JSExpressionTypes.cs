@@ -824,14 +824,16 @@ namespace JSIL.Ast {
 
     public class JSMethodPointerInfoExpression : JSExpression
     {
-        public readonly JSMethod Method;
         public readonly bool IsVirtual;
 
         public JSMethodPointerInfoExpression(JSMethod method, bool isVirtual)
             :base(method)
         {
-            Method = method;
             IsVirtual = isVirtual;
+        }
+
+        public JSMethod Method {
+            get { return (JSMethod) Values[0]; }
         }
 
         public override bool HasGlobalStateDependency

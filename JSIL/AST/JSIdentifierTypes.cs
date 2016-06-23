@@ -368,17 +368,6 @@ namespace JSIL.Ast {
             private set;
         }
 
-        public JSCachedType CachedDeclaringType
-        {
-            get;
-            private set;
-        }
-
-        internal void SetCachedDeclaringType(JSCachedType cachedType)
-        {
-            CachedDeclaringType = cachedType;
-        }
-
         internal void SetCachedGenericArguments (IEnumerable<JSCachedType> cachedTypes) {
             var newCachedGenericArguments = cachedTypes.ToArray();
 

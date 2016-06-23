@@ -501,7 +501,7 @@ namespace JSIL.Transforms {
                     int i = 0;
                     foreach (var kvp in localSet.QualifiedSignatures)
                     {
-                        var stmt = new JSQualifiedMethodCacheRecordVariableDeclarationStatement(kvp.Value.Index, kvp.Value.Method, trType);
+                        var stmt = new JSQualifiedMethodCacheRecordVariableDeclarationStatement(kvp.Value.Index, new JSQualifiedMethodCacheRecord(kvp.Value.Method, trType), trType);
                         fe.Body.Statements.Insert(i++, stmt);
                     }
 
@@ -545,7 +545,7 @@ namespace JSIL.Transforms {
 
         private JSCachedMethod GetCachedMethod(JSMethod method)
         {
-            if (method.Reference == null)
+            if (method.Reference == null || method.Method.Metadata.HasAttribute("JSIL.Meta.JSRuntimeDispatch"))
                 return null;
 
             var type = method.Reference.DeclaringType.Resolve();
@@ -606,18 +606,6 @@ namespace JSIL.Transforms {
             JSFunctionExpression enclosingFunction,
             JSMethod jsMethod, TypeReferenceContext referenceContext) {
 
-            /*int index;
-
-            var rewritten = GenericTypesRewriter.NormalizedQualified(jsMethod.Reference, jsMethod.Method.Signature, false);
-            var methodRecord = new CachedInterfaceMemberRecord(rewritten.CacheRecord.Item1, jsMethod.Identifier, rewritten.RewritedGenericParameters.Length);
-            var signatureRecord = new CachedSignatureRecord(jsMethod.Reference, rewritten.CacheRecord.Item2, false, rewritten.RewritedGenericParameters.Length);
-            var rewrittenGenericParameters = rewritten.RewritedGenericParameters;
-
-            var record = new CachedQualifiedSignatureRecord(methodRecord, signatureRecord, jsMethod.Method.IsStatic);
-            var functionIdentifier = enclosingFunction.Method.Method.Identifier;
-            CacheSet localSignatureSet = LocalCachedSets[functionIdentifier];
-
-            if (!localSignatureSet.QualifiedSignatures.TryGetValue(record, out index)) {
                 WriteInterfaceMemberToOutput(
                     output, astEmitter,
                     enclosingFunction,
@@ -629,13 +617,6 @@ namespace JSIL.Transforms {
                 output.LPar();
                 WriteSignatureToOutput(output, enclosingFunction, jsMethod.Reference, jsMethod.Method.Signature, referenceContext, false);
                 output.RPar();
-                //}
-            } else {
-                output.WriteRaw("$qs{0:X2}", index);
-                //output.LPar();
-                //output.CommaSeparatedList(rewrittenGenericParameters, referenceContext);
-                //output.RPar();
-            }*/
         }
 
         /// <summary>

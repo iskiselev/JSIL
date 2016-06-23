@@ -190,11 +190,6 @@ namespace JSIL.Transforms {
             VisitChildren(ie);
         }
 
-        public void VisitNode(JSMethod jsm)
-        {
-            jsm.SetCachedDeclaringType(GetCachedType(jsm.Reference.DeclaringType));
-            VisitChildren(jsm);
-        }
 
         public void VisitNode (JSDefaultValueLiteral dvl) {
             // We need to check this since it's a literal and it could show up in the tree multiple times.

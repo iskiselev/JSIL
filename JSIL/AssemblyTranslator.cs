@@ -1225,10 +1225,10 @@ namespace JSIL {
                     if (functionBody == null)
                         continue;
 
-                    if (cacheTypes)
-                        typeCacher.CacheTypesForFunction(functionBody);
                     if (cacheSignatures)
                         signatureCacher.CacheSignaturesForFunction(functionBody);
+                    if (cacheTypes)
+                        typeCacher.CacheTypesForFunction(functionBody);
                     if (cacheBaseMethods)
                         baseMethodCacher.CacheMethodsForFunction(functionBody);
                 }
