@@ -70,6 +70,11 @@ public struct Vector3d {
         return new Vector3d(a.x + b.x, a.y + b.y, a.z + b.z);
     }
 
+    public static Vector3d Add_Generic<T, U>(int a, int b)
+    {
+        return new Vector3d(0, 0, 0);
+    }
+
     public override string ToString () {
         return String.Format("<{0:00000000.00}, {1:00000000.00}, {2:00000000.00}>", x, y, z);
     }

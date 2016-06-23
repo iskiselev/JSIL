@@ -301,73 +301,27 @@ namespace JSIL.Transforms {
             }
         }
 
-        public struct CachedQualifiedSignatureRecord {
-            private static readonly IgnoreMethodCachedSignatureRecordComparer SignatureComparer = new IgnoreMethodCachedSignatureRecordComparer();
-
-            public readonly CachedInterfaceMemberRecord Member;
-            public readonly CachedSignatureRecord Signature;
-            public readonly bool IsStatic;
-
-            public CachedQualifiedSignatureRecord (CachedInterfaceMemberRecord member, CachedSignatureRecord signature, bool isStatic) {
-                Member = member;
-                Signature = signature;
-                IsStatic = isStatic;
-            }
-            public bool Equals(ref CachedQualifiedSignatureRecord rhs)
-            {
-                return IsStatic == rhs.IsStatic && Member.Equals(rhs.Member) && SignatureComparer.Equals(Signature, rhs.Signature);
-            }
-
-            public override bool Equals(object obj)
-            {
-                if (obj is CachedQualifiedSignatureRecord)
-                {
-                    var rhs = (CachedQualifiedSignatureRecord)obj;
-                    return Equals(ref rhs);
-                }
-                else
-                    return base.Equals(obj);
-            }
-
-            public override int GetHashCode()
-            {
-                return Member.GetHashCode() ^ SignatureComparer.GetHashCode(Signature) ^ IsStatic.GetHashCode();
-            }
-        }
-
-        public class CachedQualifiedSignatureRecordComparer : IEqualityComparer<CachedQualifiedSignatureRecord>
-        {
-            public bool Equals(CachedQualifiedSignatureRecord x, CachedQualifiedSignatureRecord y)
-            {
-                return x.Equals(ref y);
-            }
-
-            public int GetHashCode(CachedQualifiedSignatureRecord obj)
-            {
-                return obj.GetHashCode();
-            }
-        }
 
         public class CacheSet {
             private static readonly IgnoreMethodCachedSignatureRecordComparer IgnoreMethodComparer = new IgnoreMethodCachedSignatureRecordComparer();
             private static readonly CachedSignatureRecordComparer Comparer = new CachedSignatureRecordComparer();
             private static readonly CachedInterfaceMemberRecordComparer InterfaceMemberComparer = new CachedInterfaceMemberRecordComparer();
-            private static readonly CachedQualifiedSignatureRecordComparer CachedQualifiedSignatureRecordComparer = new CachedQualifiedSignatureRecordComparer();
 
-            public readonly Dictionary<CachedQualifiedSignatureRecord, int> QualifiedSignatures;
+            public readonly Dictionary<QualifiedMemberIdentifier, BaseMethodCacher.CachedMethodRecord> QualifiedSignatures;
             public readonly Dictionary<CachedSignatureRecord, int> Signatures;
             public readonly Dictionary<CachedInterfaceMemberRecord, int> InterfaceMembers;
 
-            public CacheSet (bool useMethodSignaturePerMethod) {
+            public CacheSet (ITypeInfoSource typeInfo, bool useMethodSignaturePerMethod) {
                 Signatures =
                     new Dictionary<CachedSignatureRecord, int>(useMethodSignaturePerMethod
                         ? (IEqualityComparer<CachedSignatureRecord>) Comparer
                         : IgnoreMethodComparer);
                 InterfaceMembers = new Dictionary<CachedInterfaceMemberRecord, int>(InterfaceMemberComparer);
-                QualifiedSignatures = new Dictionary<CachedQualifiedSignatureRecord, int>(CachedQualifiedSignatureRecordComparer);
+                QualifiedSignatures = new Dictionary<QualifiedMemberIdentifier, BaseMethodCacher.CachedMethodRecord>(new QualifiedMemberIdentifier.Comparer(typeInfo));
             }
         }
 
+        private readonly TypeInfoProvider TypeInfo;
         public readonly bool LocalCachingEnabled;
         public readonly bool PreferLocalCacheForGenericMethodSignatures;
         public readonly bool PreferLocalCacheForGenericInterfaceMethodSignatures;
@@ -380,11 +334,12 @@ namespace JSIL.Transforms {
         public SignatureCacher (TypeInfoProvider typeInfo, bool localCachingEnabled,
             bool preferLocalCacheForGenericMethodSignatures, bool preferLocalCacheForGenericInterfaceMethodSignatures,
             bool useMethodSignaturePerMethod) {
-            Global = new CacheSet(useMethodSignaturePerMethod);
+            Global = new CacheSet(typeInfo, useMethodSignaturePerMethod);
             LocalCachedSets = new Dictionary<MemberIdentifier, CacheSet>(
                 new MemberIdentifier.Comparer(typeInfo)
                 );
             VisitNestedFunctions = true;
+            TypeInfo = typeInfo;
             LocalCachingEnabled = localCachingEnabled;
             PreferLocalCacheForGenericMethodSignatures = preferLocalCacheForGenericMethodSignatures;
             PreferLocalCacheForGenericInterfaceMethodSignatures = preferLocalCacheForGenericInterfaceMethodSignatures;
@@ -401,13 +356,13 @@ namespace JSIL.Transforms {
 
                 var functionIdentifier = fn.Method.Method.Identifier;
                 if (!LocalCachedSets.TryGetValue(functionIdentifier, out result))
-                    result = LocalCachedSets[functionIdentifier] = new CacheSet(UseMethodSignaturePerMethod);
+                    result = LocalCachedSets[functionIdentifier] = new CacheSet(TypeInfo, UseMethodSignaturePerMethod);
             //}
 
             return result;
         }
 
-        private CachedQualifiedSignatureRecord CacheQulifiedSignature (JSMethod jsm, bool isConstructor) {
+        /*private CachedQualifiedSignatureRecord CacheQulifiedSignature (JSMethod jsm, bool isConstructor) {
             var declaringType = jsm.Reference.DeclaringType;
             var unexpandedType = declaringType;
             if (!TypeUtil.ExpandPositionalGenericParameters(unexpandedType, out declaringType))
@@ -425,7 +380,7 @@ namespace JSIL.Transforms {
                 isConstructor,
                 rewritenInfo.RewritedGenericParameters.Length);
 
-            var record = new CachedQualifiedSignatureRecord(memberRecord, signatureRecord, jsm.Method.IsStatic);
+            var record = new CachedQualifiedSignatureRecord(jsm);
 
             var set = GetCacheSet(false);
 
@@ -433,7 +388,7 @@ namespace JSIL.Transforms {
                 set.QualifiedSignatures.Add(record, set.QualifiedSignatures.Count);
 
             return record;
-        }
+        }*/
 
         private CachedSignatureRecord CacheSignature (MethodReference method, MethodSignature signature, bool isConstructor) {
             bool cacheLocally;
@@ -546,8 +501,7 @@ namespace JSIL.Transforms {
                     int i = 0;
                     foreach (var kvp in localSet.QualifiedSignatures)
                     {
-                        var record = kvp.Key;
-                        var stmt = new JSQualifiedMethodCacheRecordVariableDeclarationStatement(kvp.Value, new JSQualifiedMethodCachedSignatureExpression(trType, record.Signature.Method, record.Signature.Signature, record.Member.InterfaceMember), trType);
+                        var stmt = new JSQualifiedMethodCacheRecordVariableDeclarationStatement(kvp.Value.Index, kvp.Value.Method, trType);
                         fe.Body.Statements.Insert(i++, stmt);
                     }
 
@@ -574,43 +528,53 @@ namespace JSIL.Transforms {
             }
         }
 
-        public void VisitNode (JSMethodPointerInfoExpression methodOf) {
-            CacheQulifiedSignature(methodOf, false);
-        }
+        public void VisitNode(JSMethod method)
+        {
+            var cm = GetCachedMethod(method);
 
-        public void VisitNode (JSInvocationExpression invocation) {
-            var jsm = invocation.JSMethod;
-            MethodInfo method = null;
-            if (jsm != null)
-                method = jsm.Method;
-
-            if (method != null) {
-                bool isOverloaded = (method.IsOverloadedRecursive && !method.Metadata.HasAttribute("JSIL.Meta.JSRuntimeDispatch"));
-
-                if (isOverloaded && JavascriptAstEmitter.CanUseFastOverloadDispatch(method))
-                    isOverloaded = false;
-
-                bool isFromInterface = method.DeclaringType.IsInterface;
-                bool isNonVirtualCall = (method.IsVirtual || method.IsConstructor) && invocation.ExplicitThis;
-
-                if ((isOverloaded || isNonVirtualCall) && !PackedArrayUtil.IsPackedArrayType(jsm.Reference.DeclaringType)) {
-                    CacheQulifiedSignature(jsm, false);
-                } else {
-
-                    if (isFromInterface) {
-                        // HACK
-                        if (!PackedArrayUtil.IsPackedArrayType(jsm.Reference.DeclaringType)) {
-                            CacheInterfaceMember(jsm.Reference.DeclaringType, jsm.Identifier);
-                        }
-                    }
-
-                    if (isOverloaded)
-                        CacheSignature(jsm.Reference, method.Signature, false);
-                }
+            if (cm != null)
+            {
+                ParentNode.ReplaceChild(method, cm);
+                VisitReplacement(cm);
             }
-
-            VisitChildren(invocation);
+            else
+            {
+                VisitChildren(method);
+            }
         }
+
+        private JSCachedMethod GetCachedMethod(JSMethod method)
+        {
+            if (method.Reference == null)
+                return null;
+
+            var type = method.Reference.DeclaringType.Resolve();
+            if (type == null)
+                return null;
+
+            var identifier = new QualifiedMemberIdentifier(
+                new TypeIdentifier(type),
+                new MemberIdentifier(TypeInfo, method.Reference)
+            );
+
+            BaseMethodCacher.CachedMethodRecord record;
+            var cacheSet = GetCacheSet(true);
+            if (!cacheSet.QualifiedSignatures.TryGetValue(identifier, out record))
+                cacheSet.QualifiedSignatures.Add(identifier, record = new BaseMethodCacher.CachedMethodRecord(method, cacheSet.QualifiedSignatures.Count));
+
+            return new JSCachedMethod(
+                method.Reference, method.Method,
+                method.MethodTypes, method.GenericArguments,
+                record.Index
+            );
+        }
+
+
+        public void VisitNode(JSCachedMethod method)
+        {
+            VisitChildren(method);
+        }
+
 
         public void VisitNode (JSNewExpression newexp) {
             var ctor = newexp.Constructor;
@@ -642,7 +606,7 @@ namespace JSIL.Transforms {
             JSFunctionExpression enclosingFunction,
             JSMethod jsMethod, TypeReferenceContext referenceContext) {
 
-            int index;
+            /*int index;
 
             var rewritten = GenericTypesRewriter.NormalizedQualified(jsMethod.Reference, jsMethod.Method.Signature, false);
             var methodRecord = new CachedInterfaceMemberRecord(rewritten.CacheRecord.Item1, jsMethod.Identifier, rewritten.RewritedGenericParameters.Length);
@@ -668,10 +632,10 @@ namespace JSIL.Transforms {
                 //}
             } else {
                 output.WriteRaw("$qs{0:X2}", index);
-                /*output.LPar();
-                output.CommaSeparatedList(rewrittenGenericParameters, referenceContext);
-                output.RPar();*/
-            }
+                //output.LPar();
+                //output.CommaSeparatedList(rewrittenGenericParameters, referenceContext);
+                //output.RPar();
+            }*/
         }
 
         /// <summary>

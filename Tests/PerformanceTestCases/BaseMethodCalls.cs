@@ -10,7 +10,7 @@ public static class Program {
 
     public static int Test () {
         int numIterations = 4096000;
-        var instance = new Derived();
+        var instance = new Derived2();
 
         I = 0;
         for (var i = 0; i < numIterations; i++)
@@ -41,5 +41,12 @@ public class Derived : Base {
     new public void Method () {
         base.Method();
         Program.I += 2;
+    }
+}
+
+public class Derived2 : Derived {
+    new public void Method () {
+        base.Method();
+        Program.I += 4;
     }
 }

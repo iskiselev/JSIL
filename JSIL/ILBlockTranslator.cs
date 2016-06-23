@@ -3273,7 +3273,7 @@ namespace JSIL {
 
         protected JSExpression Translate_Ldtoken (ILExpression node, MethodReference method) {
             var methodInfo = GetMethod(method);
-            return new JSMethodOfExpression(method, methodInfo, MethodTypes);
+            return new JSMethodOfExpression(new JSMethod(method, methodInfo, MethodTypes));
         }
 
         protected JSExpression Translate_Ldtoken (ILExpression node, FieldReference field) {

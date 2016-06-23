@@ -589,6 +589,15 @@ JSIL.FunctionHolder.prototype = {
         return result;
       }
     });
+  },
+  RegisterNow: function Register(target, property) {
+    var result = this.getFunc();
+    Object.defineProperty(target, property, {
+      writable: false,
+      configurable: false,
+      value: result
+    });
+    return result;
   }
 }
 
@@ -4526,8 +4535,7 @@ JSIL.$CreateMethodMembranes = function (typeObject, publicInterface) {
 
   var makeReturnerForHolder = function (originalHolder, publicInterface, key) {
     return function () {
-      originalHolder.Register(publicInterface, key);
-      return publicInterface[key];
+      return originalHolder.RegisterNow(publicInterface, key);
     };
   };
 
@@ -10887,7 +10895,7 @@ JSIL.$FindMethodBodyInTypeChain = function (typeObject, isStatic, key, recursive
     var target = isStatic ? currentType : currentType.prototype;
 
     var method = target[key];
-    if (typeof (method) === "function")
+    if (typeof (method) === "function" || method instanceof JSIL.FunctionHolder)
       return method;
   }
 

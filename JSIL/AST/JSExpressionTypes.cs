@@ -816,20 +816,21 @@ namespace JSIL.Ast {
 
     public class JSMethodOfExpression : JSMethodPointerInfoExpression
     {
-        public JSMethodOfExpression(MethodReference reference, MethodInfo method, MethodTypeFactory methodTypes,
-            IEnumerable<TypeReference> genericArguments = null)
-            : base(reference, method, methodTypes, false, genericArguments)
+        public JSMethodOfExpression(JSMethod method)
+            : base(method, false)
         {
         }
     }
 
-    public class JSMethodPointerInfoExpression : JSMethod
+    public class JSMethodPointerInfoExpression : JSExpression
     {
-        public JSMethodPointerInfoExpression(
-            MethodReference reference, MethodInfo method, MethodTypeFactory methodTypes, bool isVirtual,
-            IEnumerable<TypeReference> genericArguments = null)
-            : base(reference, method, methodTypes, genericArguments)
+        public readonly JSMethod Method;
+        public readonly bool IsVirtual;
+
+        public JSMethodPointerInfoExpression(JSMethod method, bool isVirtual)
+            :base(method)
         {
+            Method = method;
             IsVirtual = isVirtual;
         }
 
@@ -841,14 +842,16 @@ namespace JSIL.Ast {
             }
         }
 
-        public bool IsVirtual { get; private set; }
-
         public override bool IsConstant
         {
             get
             {
                 return true;
             }
+        }
+        public override TypeReference GetActualType(TypeSystem typeSystem)
+        {
+            return Method.GetActualType(typeSystem);
         }
     }
 

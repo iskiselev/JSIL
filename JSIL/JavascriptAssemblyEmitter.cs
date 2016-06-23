@@ -1229,7 +1229,7 @@ namespace JSIL {
                     Formatter.CloseBrace(false);
                     Formatter.Semicolon(true);
                 }
-            }*/
+            }
 
             var css = signatureCacher.Global.Signatures.OrderBy((cs) => cs.Value).ToArray();
             if (css.Length > 0) {
@@ -1422,8 +1422,8 @@ namespace JSIL {
                 }
             }
 
-            if (/*(cts.Length > 0) || */(css.Length > 0))
-                Formatter.NewLine();
+            if ((cts.Length > 0) || (css.Length > 0))
+                Formatter.NewLine(); */
         }
 
         public void EmitFunctionBody (IAstEmitter astEmitter, MethodDefinition method, JSFunctionExpression function) {

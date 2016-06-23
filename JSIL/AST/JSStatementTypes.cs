@@ -295,21 +295,39 @@ namespace JSIL.Ast {
 
     public class JSQualifiedMethodCacheRecordVariableDeclarationStatement : JSVariableDeclarationStatement {
         public readonly int Index;
-        public readonly JSQualifiedMethodCachedSignatureExpression Method;
+        public readonly JSQualifiedMethodCacheRecord CacheRecord;
 
-        public JSQualifiedMethodCacheRecordVariableDeclarationStatement(int index, JSQualifiedMethodCachedSignatureExpression method, TypeReference systemTypeReference)
+        public JSQualifiedMethodCacheRecordVariableDeclarationStatement(int index, JSQualifiedMethodCacheRecord cacheRecord, TypeReference systemTypeReference)
             : base(new JSBinaryOperatorExpression(
                             JSOperator.Assignment,
                             new JSRawOutputIdentifier(
                                 systemTypeReference,
                                 "$qs{0:X2}", index
                                 ),
-                            method,
+                            cacheRecord,
                             systemTypeReference
                             ))
         {
             Index = index;
+            CacheRecord = cacheRecord;
+        }
+    }
+
+    public class JSQualifiedMethodCacheRecord : JSExpression
+    {
+        public readonly JSMethod Method;
+        private readonly TypeReference Type;
+
+        public JSQualifiedMethodCacheRecord(JSMethod method, TypeReference systemTypeReference)
+            : base(method)
+        {
             Method = method;
+            Type = systemTypeReference;
+        }
+
+        public override TypeReference GetActualType(TypeSystem typeSystem)
+        {
+            return Type;
         }
     }
 

@@ -902,7 +902,7 @@ namespace JSIL {
         }
 
         public void VisitNode (JSCachedMethod cachedMethod) {
-            Output.WriteRaw("$BM{0:X2}()", cachedMethod.Index);
+            Output.WriteRaw("$qs{0:X2}()", cachedMethod.Index);
         }
 
         public void VisitNode (JSIdentifier identifier) {
@@ -1233,10 +1233,10 @@ namespace JSIL {
             try
             {
                 ReferenceContext.Push();
-                ReferenceContext.InvokingMethod = moe.Reference;
+                ReferenceContext.InvokingMethod = moe.Method.Reference;
                 SignatureCacher.WriteQualifiedSignatureToOutput(
                     Output, this, Stack.OfType<JSFunctionExpression>().FirstOrDefault(),
-                    moe, ReferenceContext);
+                    moe.Method, ReferenceContext);
             }
             finally
             {
@@ -1246,11 +1246,11 @@ namespace JSIL {
             Output.Comma();
             Output.Value(moe.IsVirtual);
 
-            if (moe.GenericArguments != null && moe.GenericArguments.Any())
+            if (moe.Method.GenericArguments != null && moe.Method.GenericArguments.Any())
             {
                 Output.Comma();
                 Output.OpenBracket();
-                Output.CommaSeparatedList(moe.GenericArguments, ReferenceContext);
+                Output.CommaSeparatedList(moe.Method.GenericArguments, ReferenceContext);
                 Output.CloseBracket();
             }
 
@@ -1466,10 +1466,11 @@ namespace JSIL {
                     pairs.Add(new JSPairExpression(new JSStringLiteral(string.Format("$s{0:X2}", cachedSignature.Index)), cachedSignature.Method));
                 }
 
-                var methods = function.Body.Statements.OfType<JSQualifiedMethodCacheRecordVariableDeclarationStatement>().ToList();
+                var methods = function.Body.Statements.OfType<JSQualifiedMethodCacheRecordVariableDeclarationStatement>()
+                    .Where(m => !m.CacheRecord.Method.Reference.DeclaringType.Resolve().IsInterface).ToList();
                 foreach (var cachedMethod in methods) {
                     function.Body.Statements.Remove(cachedMethod);
-                    pairs.Add(new JSPairExpression(new JSStringLiteral(string.Format("$qs{0:X2}", cachedMethod.Index)), cachedMethod.Method));
+                    pairs.Add(new JSPairExpression(new JSStringLiteral(string.Format("$qs{0:X2}", cachedMethod.Index)), cachedMethod.CacheRecord));
                 }
 
                 Output.WriteRaw("return JSIL.CreateNamedFunction");
@@ -1485,15 +1486,15 @@ namespace JSIL {
 
                 foreach (var cachedMethod in methods) {
                     Output.WriteRaw("var $qs{0:X2}key = \"${{", cachedMethod.Index);
-                    Visit(cachedMethod.Method);
+                    Visit(cachedMethod.CacheRecord);
                     Output.Dot();
-                    Output.WriteRaw(cachedMethod.Method.Reference.HasThis ? "methodKey" : "methodNonQualifiedKey");
+                    Output.WriteRaw(cachedMethod.CacheRecord.Method.Reference.HasThis ? "methodKey" : "methodNonQualifiedKey");
                     Output.WriteRaw("}\"");
                     Output.Semicolon();
 
-                    if (cachedMethod.Method.Reference.HasThis) {
+                    if (cachedMethod.CacheRecord.Method.Reference.HasThis) {
                         Output.WriteRaw("var $qs{0:X2}nonVirtualKey = \"${{", cachedMethod.Index);
-                        Visit(cachedMethod.Method);
+                        Visit(cachedMethod.CacheRecord);
                         Output.Dot();
                         Output.WriteRaw("methodKeyNonVirtual");
                         Output.WriteRaw("}\"");
@@ -1524,6 +1525,21 @@ namespace JSIL {
                 Output.CurrentMethod = null;
                 Output.CloseBrace(false);
             }
+        }
+
+        public void VisitNode (JSQualifiedMethodCacheRecord cacheRecord) {
+            Visit(cacheRecord.Method.CachedDeclaringType);
+            Output.Dot();
+            Output.Identifier(cacheRecord.Method.Method.IsStatic ? "$StaticMethods" : "$Methods");
+            Output.Dot();
+            Output.Identifier(cacheRecord.Method.GetNameForInstanceReference());
+            Output.Dot();
+            Output.Identifier("InterfaceMethod");
+            Output.Dot();
+            Output.WriteRaw("Of");
+            Output.LPar();
+            WriteSignatureToOutput(output, enclosingFunction, jsMethod.Reference, jsMethod.Method.Signature, referenceContext, false);
+            output.RPar();
         }
 
         public void VisitNode (JSSwitchStatement swtch) {
@@ -2348,13 +2364,7 @@ namespace JSIL {
             if (jsm != null)
                 method = jsm.Method;
 
-            var runtimeDispatch =
-                (method != null) &&
-                method.Metadata.HasAttribute("JSIL.Meta.JSRuntimeDispatch");
-
-            bool isOverloaded = (method != null) &&
-                method.IsOverloadedRecursive &&
-                !runtimeDispatch;
+            var runtimeDispatch = (method == null) || method.Metadata.HasAttribute("JSIL.Meta.JSRuntimeDispatch");
 
             bool isStatic = invocation.ExplicitThis && invocation.ThisReference.IsNull;
 
@@ -2376,26 +2386,20 @@ namespace JSIL {
                     Output.RPar();
             };
 
-            if (isOverloaded && CanUseFastOverloadDispatch(method))
-                isOverloaded = false;
-
-            if (method != null && (method.IsVirtual || method.IsConstructor) && invocation.ExplicitThis)
-            {
-                isOverloaded = true;
-            }
-
             ReferenceContext.Push();
             try {
                 Action genericArgs = () => {
                     if (hasGenericArguments) {
                         Output.OpenBracket(false);
-                        Output.CommaSeparatedList(invocation.GenericArguments, ReferenceContext, ListValueType.TypeIdentifier);
+                        CommaSeparatedList(
+                            invocation.CachedGenericArguments.Zip(invocation.GenericArguments, (cached, uncached) => cached ?? new JSType(uncached)));
                         Output.CloseBracket(false);
                     } else
                         Output.Identifier("null", EscapingMode.None);
                 };
 
-                if (isOverloaded) {
+                if (!runtimeDispatch && jsm is JSCachedMethod) {
+                    var cachedMethod = (JSCachedMethod)jsm;
                     if (!method.DeclaringType.IsInterface) {
                         if (isStatic) {
                             Visit(invocation.Type);
@@ -2404,29 +2408,23 @@ namespace JSIL {
                         }
 
                         Output.OpenBracket();
+
                         ReferenceContext.InvokingMethod = jsm.Reference;
-                        SignatureCacher.WriteQualifiedSignatureToOutput(
-                            Output, this, Stack.OfType<JSFunctionExpression>().FirstOrDefault(),
-                            jsm,
-                            ReferenceContext
-                            );
+                        Visit(cachedMethod);
                         Output.WriteRaw(invocation.ExplicitThis && !isStatic ? "nonVirtualKey" : "key");
                         Output.CloseBracket();
 
                         Output.LPar();
                         if (hasGenericArguments) {
-                            Output.CommaSeparatedList(invocation.GenericArguments, ReferenceContext, ListValueType.TypeIdentifier);
+                            CommaSeparatedList(
+                                invocation.CachedGenericArguments.Zip(invocation.GenericArguments, (cached, uncached) => cached ?? new JSType(uncached)));
 
                             if (hasArguments)
                                 Output.Comma();
                         }
                     } else {
                         ReferenceContext.InvokingMethod = jsm.Reference;
-                        SignatureCacher.WriteQualifiedSignatureToOutput(
-                            Output, this, Stack.OfType<JSFunctionExpression>().FirstOrDefault(),
-                            jsm,
-                            ReferenceContext
-                            );
+                        Visit(cachedMethod);
 
                         Output.Dot();
                         Output.WriteRaw(isStatic ? "CallStatic" : invocation.ExplicitThis ? "CallNonVirtual" : "Call");
@@ -2453,37 +2451,10 @@ namespace JSIL {
                         Output.LPar();
                     } else if ((method != null) && method.DeclaringType.IsInterface) {
                         // HACK: Lets you bypass the interface method precise dispatch machinery for better performance.
-                        if (runtimeDispatch) {
-                            Visit(invocation.ThisReference, "ThisReference");
-                            Output.Dot();
-                            Output.Identifier(jsm.Identifier, EscapingMode.MemberIdentifier);
-                            Output.LPar();
-                        } else {
-                            SignatureCacher.WriteInterfaceMemberToOutput(
-                                Output, this, Stack.OfType<JSFunctionExpression>().FirstOrDefault(),
-                                jsm, ReferenceContext
-                                );
-
-                            Output.Dot();
-                            Output.WriteRaw("Call");
-
-                            Output.LPar();
-                            Visit(invocation.ThisReference, "ThisReference");
-                            Output.Comma();
-
-                            genericArgs();
-
-                            if (hasArguments)
-                                Output.Comma();
-                        }
-                    } else if (invocation.Method is JSCachedMethod) {
-                        Visit(invocation.Method);
-                        Output.LPar();
-
                         Visit(invocation.ThisReference, "ThisReference");
-
-                        if (hasArguments)
-                            Output.Comma();
+                        Output.Dot();
+                        Output.Identifier(jsm.Identifier, EscapingMode.MemberIdentifier);
+                        Output.LPar();
                     } else {
                         thisRef();
                         Output.Dot();
