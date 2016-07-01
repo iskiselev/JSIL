@@ -45,6 +45,7 @@ namespace JSIL {
         protected readonly Stack<BlockType> BlockStack = new Stack<BlockType>();
         protected readonly Stack<bool> PassByRefStack = new Stack<bool>();
         protected readonly Stack<bool> OverflowCheckStack = new Stack<bool>();
+        protected bool IsInsideGeneratedFunction;
 
         public JavascriptAstEmitter (
             JavascriptFormatter output, JSILIdentifier jsil, 
