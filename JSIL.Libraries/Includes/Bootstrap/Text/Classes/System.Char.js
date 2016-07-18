@@ -47,6 +47,14 @@ JSIL.ImplementExternals("System.Char", function ($) {
     }
   );
 
+  $.Method({ Static: true, Public: true }, "IsHighSurrogate",
+    new JSIL.MethodSignature($.Boolean, [$.Char], []),
+    function IsSurrogate(c) {
+      var charCode = c.charCodeAt(0);
+      return (charCode >= 0xD800) && (charCode <= 0xDBFF);
+    }
+  );
+
   $.Method({ Static: true, Public: true }, "IsWhiteSpace",
     new JSIL.MethodSignature($.Boolean, [$.Char], []),
     function IsWhiteSpace(c) {
@@ -70,6 +78,20 @@ JSIL.ImplementExternals("System.Char", function ($) {
     new JSIL.MethodSignature($.Char, [$.Char], []),
     function ToLowerInvariant(c) {
       return String.fromCharCode(c).toUpperCase().charCodeAt(0);
+    }
+  );
+
+  $.Method({ Static: true, Public: true }, "ConvertToUtf32",
+    new JSIL.MethodSignature($.Int32, [$.String, $.Int32], []),
+    function ConvertToUtf32(s, i) {
+      return $jsilcore.charCodeAt(s, i);
+    }
+  );
+
+  $.Method({ Static: true, Public: true }, "ConvertFromUtf32",
+    new JSIL.MethodSignature($.String, [$.Int32], []),
+    function ConvertFromUtf32(i) {
+        return $jsilcore.fromCharCode(i);
     }
   );
 
