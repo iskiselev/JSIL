@@ -307,7 +307,7 @@ namespace JSIL.Transforms {
             private static readonly CachedSignatureRecordComparer Comparer = new CachedSignatureRecordComparer();
             private static readonly CachedInterfaceMemberRecordComparer InterfaceMemberComparer = new CachedInterfaceMemberRecordComparer();
 
-            public readonly Dictionary<QualifiedMemberIdentifier, BaseMethodCacher.CachedMethodRecord> QualifiedSignatures;
+            public readonly Dictionary<MethodReference, BaseMethodCacher.CachedMethodRecord> QualifiedSignatures;
             public readonly Dictionary<CachedSignatureRecord, int> Signatures;
             public readonly Dictionary<CachedInterfaceMemberRecord, int> InterfaceMembers;
 
@@ -317,7 +317,7 @@ namespace JSIL.Transforms {
                         ? (IEqualityComparer<CachedSignatureRecord>) Comparer
                         : IgnoreMethodComparer);
                 InterfaceMembers = new Dictionary<CachedInterfaceMemberRecord, int>(InterfaceMemberComparer);
-                QualifiedSignatures = new Dictionary<QualifiedMemberIdentifier, BaseMethodCacher.CachedMethodRecord>(new QualifiedMemberIdentifier.Comparer(typeInfo));
+                QualifiedSignatures = new Dictionary<MethodReference, BaseMethodCacher.CachedMethodRecord>(new MethodReferenceComparer(typeInfo));
             }
         }
 
@@ -530,16 +530,15 @@ namespace JSIL.Transforms {
 
         public void VisitNode(JSMethod method)
         {
-            var cm = GetCachedMethod(method);
+            if (ParentNode is JSInvocationExpression || ParentNode is JSMethodPointerInfoExpression) {
+                var cm = GetCachedMethod(method);
 
-            if (cm != null)
-            {
-                ParentNode.ReplaceChild(method, cm);
-                VisitReplacement(cm);
-            }
-            else
-            {
-                VisitChildren(method);
+                if (cm != null) {
+                    ParentNode.ReplaceChild(method, cm);
+                    VisitReplacement(cm);
+                } else {
+                    VisitChildren(method);
+                }
             }
         }
 
@@ -552,15 +551,10 @@ namespace JSIL.Transforms {
             if (type == null)
                 return null;
 
-            var identifier = new QualifiedMemberIdentifier(
-                new TypeIdentifier(type),
-                new MemberIdentifier(TypeInfo, method.Reference)
-            );
-
             BaseMethodCacher.CachedMethodRecord record;
             var cacheSet = GetCacheSet(true);
-            if (!cacheSet.QualifiedSignatures.TryGetValue(identifier, out record))
-                cacheSet.QualifiedSignatures.Add(identifier, record = new BaseMethodCacher.CachedMethodRecord(method, cacheSet.QualifiedSignatures.Count));
+            if (!cacheSet.QualifiedSignatures.TryGetValue(method.Reference, out record))
+                cacheSet.QualifiedSignatures.Add(method.Reference, record = new BaseMethodCacher.CachedMethodRecord(method, cacheSet.QualifiedSignatures.Count));
 
             return new JSCachedMethod(
                 method.Reference, method.Method,

@@ -112,13 +112,13 @@ namespace JSIL.Transforms {
             // Referring to an enclosing type from a nested type creates a cycle
             if (TypeUtil.IsNestedInside(type, ThisType))
                 return false;
-             */
+             
 
             if (TypeUtil.ContainsGenericParameter(type))
                 return false;
 
             if (TypeUtil.IsOpenType(type))
-                return false;
+                return false;*/
 
             if ((type is ByReferenceType) || (type is PointerType))
                 return false;
@@ -178,6 +178,15 @@ namespace JSIL.Transforms {
                 cast.CachedTypeIndex = ct.Index;
 
             VisitChildren(cast);
+        }
+
+        public void VisitNode(JSConditionalStructCopyExpression sce)
+        {
+            var ct = GetCachedType(sce.Parameter);
+            if (ct != null)
+                sce.CachedTypeIndex = ct.Index;
+
+            VisitChildren(sce);
         }
 
         public void VisitNode (JSInvocationExpression ie) {

@@ -565,8 +565,8 @@ $jsilcore.FunctionNull = function () { };
 JSIL.FunctionHolder = function FunctionHolder(bodyGenerator) {
   this.bodyGenerator = bodyGenerator;
   this.func = null;
-  this.getFunc = function () {
-    this.func = this.bodyGenerator();
+  this.getFunc = function (thisType, typeArguments = []) {
+    this.func = this.bodyGenerator(thisType, ...typeArguments);
     this.getFunc = function () { return this.func; }
     this.bodyGenerator = null;
     return this.func;
@@ -574,13 +574,13 @@ JSIL.FunctionHolder = function FunctionHolder(bodyGenerator) {
 }
 
 JSIL.FunctionHolder.prototype = {
-  Register: function Register(target, property){
+  Register: function Register(target, property, thisType, typeArguments){
     var func = this;
     Object.defineProperty(target, property,
     {
       configurable: true,
       get: function () {
-        var result = func.getFunc();
+        var result = func.getFunc(thisType, typeArguments);
         Object.defineProperty(target, property, {
           writable: false,
           configurable: false,
@@ -590,8 +590,8 @@ JSIL.FunctionHolder.prototype = {
       }
     });
   },
-  RegisterNow: function Register(target, property) {
-    var result = this.getFunc();
+  RegisterNow: function RegisterNow(target, property, thisType, typeArguments) {
+    var result = this.getFunc(thisType, typeArguments);
     Object.defineProperty(target, property, {
       writable: false,
       configurable: false,
@@ -3005,20 +3005,48 @@ JSIL.RenameGenericMethods = function (publicInterface, typeObject) {
           continue;
         }
 
+        var methodReference = JSIL.$FindMethodBodyInTypeChain(typeObject, descriptor.Static, oldName, false);
+
         if ((genericSignature !== null) && (genericSignature.get_Hash() != signature.get_Hash())) {
           var newName = signature.GetNamedKey(descriptor.EscapedName, true);
 
-          var methodReference = JSIL.$FindMethodBodyInTypeChain(typeObject, descriptor.Static, oldName, false);
           if (!methodReference)
             JSIL.RuntimeError("Failed to find unrenamed generic method");
 
           typeObject.__RenamedMethods__[oldName] = newName;
 
           delete target[oldName];
-          JSIL.SetValueProperty(target, newName, methodReference);
+
+          if (methodReference instanceof JSIL.FunctionHolder) {
+            var useMembrane = descriptor.Static &&
+              ($jsilcore.cctorKeys.indexOf(descriptor.Name) < 0) &&
+              ($jsilcore.cctorKeys.indexOf(descriptor.EscapedName) < 0);
+            var newHolder = new JSIL.FunctionHolder(methodReference.bodyGenerator);
+            if (signature.GenericSuffix || useMembrane) {
+              JSIL.SetValueProperty(target, newName, newHolder);
+            } else {
+              newHolder.Register(target, newName, target);
+            }
+
+          } else {
+            JSIL.SetValueProperty(target, newName, methodReference);
+          }
 
           if (trace)
             console.log(typeObject.__FullName__ + ": " + oldName + " -> " + newName);
+        } else if (methodReference instanceof JSIL.FunctionHolder) {
+
+          // TODO: Remove code repeat.
+          var useMembrane = descriptor.Static &&
+              ($jsilcore.cctorKeys.indexOf(descriptor.Name) < 0) &&
+              ($jsilcore.cctorKeys.indexOf(descriptor.EscapedName) < 0);
+          var newHolder = new JSIL.FunctionHolder(methodReference.bodyGenerator);
+          if (signature.GenericSuffix || useMembrane) {
+            JSIL.SetValueProperty(target, oldName, newHolder);
+          } else {
+            newHolder.Register(target, oldName, target);
+          }
+
         }
       }
   }
@@ -4526,7 +4554,7 @@ JSIL.$ApplyMemberHiding = function (typeObject, memberList, resolveContext) {
 
 JSIL.$CreateMethodMembranes = function (typeObject, publicInterface) {
   var maybeRunCctors = function MaybeRunStaticConstructors () {
-    JSIL.RunStaticConstructors(publicInterface, typeObject);    
+    JSIL.RunStaticConstructors(publicInterface, typeObject);
   };
 
   var makeReturner = function (value) {
@@ -4535,7 +4563,7 @@ JSIL.$CreateMethodMembranes = function (typeObject, publicInterface) {
 
   var makeReturnerForHolder = function (originalHolder, publicInterface, key) {
     return function () {
-      return originalHolder.RegisterNow(publicInterface, key);
+      return originalHolder.RegisterNow(publicInterface, key, publicInterface);
     };
   };
 
@@ -4554,16 +4582,18 @@ JSIL.$CreateMethodMembranes = function (typeObject, publicInterface) {
     //  instead of the closed form.
     var key = method._data.signature.GetNamedKey(method._descriptor.EscapedName, true);
 
-    var useMembrane = isStatic && 
+    var useMembrane = isStatic && !method._data.signature.GenericSuffix &&
       ($jsilcore.cctorKeys.indexOf(method._descriptor.Name) < 0) &&
       ($jsilcore.cctorKeys.indexOf(method._descriptor.EscapedName) < 0);
 
     if (useMembrane) {
       var originalFunction = publicInterface[key];
       if (originalFunction instanceof JSIL.FunctionHolder) {
-        JSIL.DefinePreInitMethod(
-          publicInterface, key, makeReturnerForHolder(originalFunction, publicInterface, key), maybeRunCctors
-        );
+        if (method._data.signature.GenericSuffix || !method._typeObject.__IsClosed__) {
+          JSIL.DefinePreInitMethod(publicInterface, key, makeReturner(originalFunction), maybeRunCctors);
+        } else {
+          JSIL.DefinePreInitMethod(publicInterface, key, makeReturnerForHolder(originalFunction, publicInterface, key), maybeRunCctors);
+        }
       }
       else {
         if (typeof (originalFunction) !== "function") {
@@ -7423,8 +7453,8 @@ JSIL.InterfaceBuilder.prototype.Method = function (_descriptor, methodName, sign
       var useMembrane = descriptor.Static &&
                           ($jsilcore.cctorKeys.indexOf(descriptor.Name) < 0) &&
                           ($jsilcore.cctorKeys.indexOf(descriptor.EscapedName) < 0);
-
-      if (useMembrane) {
+      var isOpenType = this.typeObject.get_IsGenericType();
+      if (useMembrane || isOpenType) {
         // Membrane will add aditional modification to function.
         JSIL.SetValueProperty(descriptor.Target, mangledName, fn);
       } else {
@@ -8190,6 +8220,149 @@ JSIL.InterfaceMethod = function (typeObject, methodName, methodInfo) {
 JSIL.SetLazyValueProperty(JSIL.InterfaceMethod.prototype, "CallStatic", function () { return this.$MakeCallMethod(false, true); }, true);
 JSIL.SetLazyValueProperty(JSIL.InterfaceMethod.prototype, "Call", function () { return this.$MakeCallMethod(true, false); }, true);
 JSIL.SetLazyValueProperty(JSIL.InterfaceMethod.prototype, "CallNonVirtual", function () { return this.$MakeCallMethod(false, false); }, true);
+
+JSIL.InterfaceMethod.Find = function(callType, typePublicInterface, methodName, signature) {
+    if (typeof typePublicInterface === "undefined") {
+        return null;
+    }
+
+    try {
+        var interfaceMethodsHolder = (callType === "static"
+            ? typePublicInterface.$StaticMethods
+            : typePublicInterface.$Methods);
+
+        var interfaceMethodHolder = interfaceMethodsHolder[methodName];
+
+        if (typeof interfaceMethodHolder === "undefined") {
+            return null;
+        }
+
+        var qualifiedMethod = interfaceMethodHolder.InterfaceMethod.Of(signature);
+        
+        return qualifiedMethod;
+    } catch (e) {
+        return null;
+    }
+}
+
+JSIL.InterfaceMethod.GetMethodKey = function(callType, typePublicInterface, methodName, signature, genericArguments) {
+    // callType should be either: "static", "instance", "virtual"
+    try {
+        var qualifiedMethod = JSIL.InterfaceMethod.Find(callType, typePublicInterface, methodName, signature);
+
+        if (qualifiedMethod === null) {
+            return "__$nomethod$__";;
+        }
+
+        if (genericArguments == null) {
+            switch (callType) {
+            case "static":
+                return qualifiedMethod.methodNonQualifiedKey;
+            case "instance":
+                return qualifiedMethod.methodKeyNonVirtual;
+            case "virtual":
+                return qualifiedMethod.methodKey;
+            default:
+                return JSIL.RuntimeError("Incorrect callType: " + callType);
+            }
+        } else {
+            switch (callType) {
+            case "static":
+                return qualifiedMethod.GetGenericStaticMethodKey(genericArguments);
+            case "instance":
+                return qualifiedMethod.GetGenericNonVirtualMethodKey(genericArguments);
+            case "virtual":
+                return qualifiedMethod.GetGenericVirtualMethodKey(genericArguments);
+            default:
+                return JSIL.RuntimeError("Incorrect callType: " + callType);
+            }
+        }
+    } catch (e) {
+        return "__$nomethod$__";
+    }
+}
+
+JSIL.InterfaceMethod.RegisterGenericMethod = function (target, methodKey, membraneInitializer, typeArguments) {
+  var typesSuffix = "$";
+  for (var i = 0; i < typeArguments.length; i++) {
+    typesSuffix += typeArguments[i].__TypeId__ + ",";
+  }
+  typesSuffix = typesSuffix.substr(0, typesSuffix.length - 1);
+
+  var key = methodKey + typesSuffix;
+
+  if (!(key in target)) {
+    var method = target[methodKey];
+
+    var nonHolderExecutor = function() {
+      return target[methodKey].apply(this, typeArguments.concat(Array.prototype.slice.call(arguments)));
+    };
+
+    if (membraneInitializer !== null) {
+      var makeReturner = function (value) {
+        return function () { return value; };
+      };
+
+      var makeReturnerForHolder = function (originalHolder, publicInterface, key) {
+        return function () {
+          return originalHolder.RegisterNow(target, key, target, typeArguments);
+        };
+      };
+
+      if (method instanceof JSIL.FunctionHolder) {
+        JSIL.DefinePreInitMethod(target, key, makeReturnerForHolder(new JSIL.FunctionHolder(method.bodyGenerator), target, key), membraneInitializer);
+      } else {
+        JSIL.DefinePreInitMethod(target, key, makeReturner(nonHolderExecutor), membraneInitializer);
+      }
+    } else {
+      if (method instanceof JSIL.FunctionHolder) {
+        new JSIL.FunctionHolder(method.bodyGenerator).Register(target, key, target, typeArguments);
+      } else {
+        target[key] = nonHolderExecutor;
+      }
+    }
+  }
+
+  return key;
+}
+
+
+JSIL.InterfaceMethod.prototype.GetGenericStaticMethodKey = function (typeArguments) {
+  var useMembrane = !this.typeObject.__RanCctors__ &&
+  ($jsilcore.cctorKeys.indexOf(this.methodInfo._descriptor.Name) < 0) &&
+  ($jsilcore.cctorKeys.indexOf(this.methodInfo._descriptor.Name) < 0);
+
+  var membraneInitializer = null;
+  var typeObject = this.typeObject;
+  var publicInterface = this.typeObject.__PublicInterface__;
+  if (useMembrane) {
+    membraneInitializer = function MaybeRunStaticConstructors () {
+      JSIL.RunStaticConstructors(publicInterface, typeObject);
+    };
+  }
+
+  return JSIL.InterfaceMethod.RegisterGenericMethod(
+    this.typeObject.__PublicInterface__,
+    this.methodNonQualifiedKey,
+    membraneInitializer,
+    typeArguments);
+}
+
+JSIL.InterfaceMethod.prototype.GetGenericNonVirtualMethodKey = function (typeArguments) {
+  return JSIL.InterfaceMethod.RegisterGenericMethod(
+    this.typeObject.__PublicInterface__.prototype,
+    this.methodKeyNonVirtual,
+    null,
+    typeArguments);
+}
+
+JSIL.InterfaceMethod.prototype.GetGenericVirtualMethodKey = function (typeArguments) {
+  return JSIL.InterfaceMethod.RegisterGenericMethod(
+    this.typeObject.__PublicInterface__.prototype,
+    this.methodKey,
+    null,
+    typeArguments);
+}
 
 JSIL.InterfaceMethod.prototype.RegisterMember = function (methodInfo, skipExistingCheck) {
   if (this.__OfCache__ == null) {

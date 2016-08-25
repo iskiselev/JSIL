@@ -510,17 +510,17 @@
     );
 
     $.Method({ Public: true, Static: false }, "get_IsGenericParameter",
-      new JSIL.MethodSignature($jsilcore.TypeRef("System.Type"), []),
+      new JSIL.MethodSignature($.Boolean, []),
       JSIL.TypeObjectPrototype.get_IsGenericParameter
     );
 
     $.Method({ Public: true, Static: false }, "get_IsInterface",
-      new JSIL.MethodSignature($jsilcore.TypeRef("System.Type"), []),
+      new JSIL.MethodSignature($.Boolean, []),
       JSIL.TypeObjectPrototype.get_IsInterface
     );
 
     $.Method({ Public: true, Static: false }, "get_IsByRef",
-      new JSIL.MethodSignature($jsilcore.TypeRef("System.Type"), []),
+      new JSIL.MethodSignature($.Boolean, []),
       JSIL.TypeObjectPrototype.get_IsByRef
     );
 

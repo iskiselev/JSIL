@@ -385,6 +385,73 @@ namespace JSIL.Internal {
         }
     }
 
+    public class MethodReferenceComparer : IEqualityComparer<MethodReference>
+    {
+        public readonly ITypeInfoSource TypeInfo;
+
+        public MethodReferenceComparer(ITypeInfoSource typeInfo)
+        {
+            TypeInfo = typeInfo;
+        }
+
+        public bool Equals (MethodReference lhs, MethodReference rhs) {
+            if ((lhs == null) || (rhs == null))
+                return lhs == rhs;
+
+            if (lhs == rhs)
+                return true;
+
+            if (lhs.GenericParameters.Count != rhs.GenericParameters.Count || lhs.Parameters.Count != rhs.Parameters.Count)
+            {
+                return false;
+            }
+
+            if (lhs.IsGenericInstance != rhs.IsGenericInstance)
+                return false;
+
+            var lhsDeclaringType = GenericTypeIdentifier.Create(lhs.DeclaringType);
+            if (lhsDeclaringType == null)
+                return false;
+
+            var rhsDeclaringType = GenericTypeIdentifier.Create(rhs.DeclaringType);
+            if (rhsDeclaringType == null)
+                return false;
+
+            if (!lhsDeclaringType.Equals(rhsDeclaringType))
+                return false;
+
+            var lhsMember = MemberIdentifier.New(TypeInfo, lhs);
+            var rhsMember = MemberIdentifier.New(TypeInfo, rhs);
+
+            if (!lhsMember.Equals(rhsMember, TypeInfo))
+                return false;
+
+
+            if (lhs.IsGenericInstance) {
+                var lhsGenericInstance = (GenericInstanceMethod) lhs;
+                var rhsGenericInstance = (GenericInstanceMethod) rhs;
+                for (int i = 0; i < lhsGenericInstance.GenericArguments.Count; i++) {
+                    lhsDeclaringType = GenericTypeIdentifier.Create(lhsGenericInstance.GenericArguments[i]);
+                    if (lhsDeclaringType == null)
+                        return false;
+
+                    rhsDeclaringType = GenericTypeIdentifier.Create(rhsGenericInstance.GenericArguments[i]);
+                    if (rhsDeclaringType == null)
+                        return false;
+
+                    if (!lhsDeclaringType.Equals(rhsDeclaringType))
+                        return false;
+                }
+            }
+
+            return true;
+        }
+
+        public int GetHashCode (MethodReference obj) {
+            return 0;
+        }
+    }
+
     public struct QualifiedMemberIdentifier {
         public class Comparer : IEqualityComparer<QualifiedMemberIdentifier> {
             public readonly ITypeInfoSource TypeInfo;

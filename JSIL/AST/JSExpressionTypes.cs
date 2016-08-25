@@ -2602,6 +2602,7 @@ namespace JSIL.Ast {
     }
 
     public class JSConditionalStructCopyExpression : JSStructCopyExpression {
+        public int? CachedTypeIndex;
         public readonly GenericParameter Parameter;
 
         public JSConditionalStructCopyExpression (GenericParameter parameter, JSExpression @struct)

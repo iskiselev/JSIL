@@ -125,6 +125,34 @@ namespace JSIL.Internal {
                 DeclaringTypeName = null;
         }
 
+        public TypeIdentifier(GenericParameter type)
+        {
+            if (type == null)
+                throw new ArgumentNullException("type");
+
+            if (type.Module != null)
+            {
+                var asm = type.Module.Assembly;
+                if (asm != null)
+                    Assembly = asm.FullName;
+                else
+                    Assembly = null;
+            }
+            else
+            {
+                Assembly = null;
+            }
+
+            Namespace = type.Namespace;
+            Name = type.Name;
+
+            var declaringType = type.DeclaringType;
+            if (declaringType != null)
+                DeclaringTypeName = declaringType.FullName;
+            else
+                DeclaringTypeName = null;
+        }
+
         public bool Equals (TypeIdentifier rhs) {
             if (!String.Equals(Name, rhs.Name))
                 return false;
@@ -201,11 +229,19 @@ namespace JSIL.Internal {
             while (type is ByReferenceType)
                 type = ((ByReferenceType)type).ElementType;
 
-            var resolved = TypeUtil.GetTypeDefinition(type, mapArraysToSystemArray);
+            TypeIdentifier identifier = default(TypeIdentifier);
+            if (type is GenericParameter) {
+                var gp = (GenericParameter)type;
+                identifier = new TypeIdentifier(gp);
+            }
+            else {
+                var resolved = TypeUtil.GetTypeDefinition(type, mapArraysToSystemArray);
 
-            if (resolved == null)
-            {
-                return null;
+                if (resolved == null)
+                {
+                    return null;
+                }
+                identifier = new TypeIdentifier(resolved);
             }
 
             var at = type as ArrayType;
@@ -233,12 +269,12 @@ namespace JSIL.Internal {
                 children = Enumerable.Empty<GenericTypeIdentifier>();
             }
 
-            var identifier = new GenericTypeIdentifier(
-                new TypeIdentifier(resolved),
+            var genericIdentifier = new GenericTypeIdentifier(
+                identifier,
                 children,
                 (at != null) ? at.Rank : 0);
 
-            return identifier;
+            return genericIdentifier;
         }
 
         public bool Equals (GenericTypeIdentifier rhs) {

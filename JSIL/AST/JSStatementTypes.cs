@@ -331,6 +331,24 @@ namespace JSIL.Ast {
         }
     }
 
+    public class JSQualifiedMethodCacheRecordReference : JSExpression {
+        public readonly JSQualifiedMethodCacheRecord CacheRecord;
+        public readonly bool IsInstanceNonVirtualCall;
+        public readonly bool IsInterfaceMethodObject;
+
+        public JSQualifiedMethodCacheRecordReference(JSQualifiedMethodCacheRecord cacheMethodRecord, bool isInstanceNonVirtualCall, bool isInterfaceMethodObject)
+            : base(cacheMethodRecord) {
+            CacheRecord = cacheMethodRecord;
+            IsInstanceNonVirtualCall = isInstanceNonVirtualCall;
+            IsInterfaceMethodObject = isInterfaceMethodObject;
+        }
+
+        public override TypeReference GetActualType(TypeSystem typeSystem)
+        {
+            return CacheRecord.GetActualType(typeSystem);
+        }
+    }
+
     public class JSSignatureCacheRecordVariableDeclarationStatement : JSVariableDeclarationStatement {
         public readonly int Index;
         public readonly JSLocalCachedSignatureExpression Method;

@@ -658,7 +658,7 @@ namespace JSIL.Ast {
 
         public override bool IsParameter {
             get {
-                return true;
+                return false;
             }
         }
     }

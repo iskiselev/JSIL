@@ -926,7 +926,7 @@ namespace JSIL.Internal {
                         Dot();
                         Identifier("get");
                         LPar();
-                        WriteRaw("this");
+                        WriteRaw("$thisResolvedType");
                         RPar();
                     } else {
                         Identifier(gp.Name);
@@ -1001,7 +1001,7 @@ namespace JSIL.Internal {
             if (includeParens)
                 LPar();
 
-            WriteRaw("System.Array.Of");
+            WriteRaw("$jsilcore.System.Array.Of");
             LPar();
             TypeIdentifier(type.ElementType as dynamic, context, false, true);
             if (!type.IsVector)

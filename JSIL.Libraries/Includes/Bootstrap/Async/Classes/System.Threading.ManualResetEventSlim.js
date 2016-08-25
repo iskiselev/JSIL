@@ -22,6 +22,13 @@ JSIL.ImplementExternals("System.Threading.ManualResetEventSlim", function ($inte
     }
   );
 
+  $.Method({ Static: false, Public: false }, "Set",
+    JSIL.MethodSignature.Void,
+    function () {
+      // FIXME
+    }
+  );
+
   $.Method({ Static: false, Public: true }, "Wait",
     JSIL.MethodSignature.Void,
     function () {

@@ -99,7 +99,7 @@ JSIL.ImplementExternals("System.Runtime.CompilerServices.AsyncTaskMethodBuilder`
   );
 
   $.Method({ Static: true, Public: true }, "Create",
-    (new JSIL.MethodSignature($.Type, [], [])),
+    (new JSIL.MethodSignature($jsilcore.TypeRef("System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1", [$.GenericParameter("TResult")]), [], [])),
     function Create() {
       return new ($jsilcore.System.Runtime.CompilerServices.AsyncTaskMethodBuilder$b1.Of(this.TResult))();
     }
@@ -227,7 +227,7 @@ JSIL.MakeType({
   );
 
   $.ExternalMethod({ Static: true, Public: true }, "Create",
-    new JSIL.MethodSignature($.Type, [], [])
+    new JSIL.MethodSignature($jsilcore.TypeRef("System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1", [$.GenericParameter("TResult")]), [], [])
   );
 
   $.ExternalMethod({ Static: false, Public: true }, "get_Task",
