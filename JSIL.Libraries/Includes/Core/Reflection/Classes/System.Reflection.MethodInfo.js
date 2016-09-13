@@ -149,6 +149,20 @@
     }
   );
 
+  $.Method({ Public: true, Static: false }, "CreateDelegate",
+    new JSIL.MethodSignature($.Object, [$jsilcore.TypeRef("System.Type"), $.Object]),
+    function CreateDelegate(type, obj) {
+      return $jsilcore.System.Delegate.CreateDelegate(type, obj, this);
+    }
+  );
+
+  $.Method({ Public: true, Static: false }, "CreateDelegate",
+    new JSIL.MethodSignature($.Object, [$jsilcore.TypeRef("System.Type")]),
+    function CreateDelegate(type) {
+        return $jsilcore.System.Delegate.CreateDelegate(type, null, this);
+    }
+  );
+
   $.Method({ Static: false, Public: true }, "GetBaseDefinition",
     (new JSIL.MethodSignature($jsilcore.TypeRef("System.Reflection.MethodInfo"), [], [])),
     function getBaseDefinition() {
