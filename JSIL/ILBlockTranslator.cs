@@ -2897,7 +2897,7 @@ namespace JSIL {
             return JSIL.Coalesce(
                 left,
                 right,
-                node.ExpectedType
+                node.ExpectedType ?? node.InferredType
             );
         }
 
