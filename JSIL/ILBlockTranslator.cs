@@ -2882,10 +2882,22 @@ namespace JSIL {
         }
 
         protected JSExpression Translate_NullCoalescing (ILExpression node) {
+            JSExpression left, right;
+            try
+            {
+                AutoCastingState.Push(false);
+                left = TranslateNode(node.Arguments[0]);
+                right = TranslateNode(node.Arguments[1]);
+            }
+            finally
+            {
+                AutoCastingState.Pop();
+            }
+
             return JSIL.Coalesce(
-                TranslateNode(node.Arguments[0]),
-                TranslateNode(node.Arguments[1]),
-                node.InferredType ?? node.ExpectedType
+                left,
+                right,
+                node.ExpectedType
             );
         }
 
