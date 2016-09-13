@@ -59,8 +59,8 @@ namespace JSIL.Compiler.Extensibility {
         void EmitSpacer ();
         void EmitSemicolon ();
         void EmitProxyComment (string fullName);
-        void EmitEvent (DecompilerContext context, IAstEmitter astEmitter, EventDefinition @event, JSRawOutputIdentifier dollar);
-        void EmitProperty (DecompilerContext context, IAstEmitter astEmitter, PropertyDefinition property, JSRawOutputIdentifier dollar);
+        void EmitEvent (DecompilerContext context, IAstEmitter astEmitter, EventDefinition @event, bool stubbed, JSRawOutputIdentifier dollar);
+        void EmitProperty (DecompilerContext context, IAstEmitter astEmitter, PropertyDefinition property, bool stubbed, JSRawOutputIdentifier dollar);
         void EmitField (DecompilerContext context, IAstEmitter astEmitter, FieldDefinition field, JSRawOutputIdentifier dollar, JSExpression defaultValue);
         void EmitConstant (DecompilerContext context, IAstEmitter astEmitter, FieldDefinition field, JSRawOutputIdentifier dollar, JSExpression value);
         void EmitPrimitiveDefinition (DecompilerContext context, TypeDefinition typedef, bool stubbed, JSRawOutputIdentifier dollar);

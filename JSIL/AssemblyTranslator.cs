@@ -1287,12 +1287,12 @@ namespace JSIL {
 
             Action translateProperties = () => {
                 foreach (var property in typedef.Properties)
-                    assemblyEmitter.EmitProperty(context, astEmitter, property, dollar);
+                    assemblyEmitter.EmitProperty(context, astEmitter, property, stubbed, dollar);
             };
 
             Action translateEvents = () => {
                 foreach (var @event in typedef.Events)
-                    assemblyEmitter.EmitEvent(context, astEmitter, @event, dollar);
+                    assemblyEmitter.EmitEvent(context, astEmitter, @event, stubbed, dollar);
             };
 
             TranslateTypeStaticConstructor(

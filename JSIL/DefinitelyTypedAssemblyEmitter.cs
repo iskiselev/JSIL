@@ -872,10 +872,10 @@ namespace JSIL {
         public virtual void EmitProxyComment (string fullName) {
         }
 
-        public virtual void EmitEvent (DecompilerContext context, IAstEmitter astEmitter, EventDefinition @event, JSRawOutputIdentifier dollar) {
+        public virtual void EmitEvent (DecompilerContext context, IAstEmitter astEmitter, EventDefinition @event, bool stubbed, JSRawOutputIdentifier dollar) {
         }
 
-        public virtual void EmitProperty (DecompilerContext context, IAstEmitter astEmitter, PropertyDefinition property, JSRawOutputIdentifier dollar) {
+        public virtual void EmitProperty (DecompilerContext context, IAstEmitter astEmitter, PropertyDefinition property, bool stubbed, JSRawOutputIdentifier dollar) {
         }
 
         public virtual void EmitField (DecompilerContext context, IAstEmitter astEmitter, FieldDefinition field, JSRawOutputIdentifier dollar, JSExpression defaultValue) {

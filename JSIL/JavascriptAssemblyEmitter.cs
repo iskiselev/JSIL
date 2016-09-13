@@ -858,15 +858,19 @@ namespace JSIL {
 
         public void EmitProperty (
             DecompilerContext context, IAstEmitter astEmitter,
-            PropertyDefinition property, JSRawOutputIdentifier dollar
+            PropertyDefinition property, bool stubbed, JSRawOutputIdentifier dollar
         ) {
             if (Translator.ShouldSkipMember(property))
                 return;
 
+            bool isExternal, isReplaced, methodIsProxied;
             bool preservedAtLeastOneAccessor = false;
-            preservedAtLeastOneAccessor |= property.GetMethod != null && !Translator.ShouldSkipMember(property.GetMethod);
-            preservedAtLeastOneAccessor |= property.SetMethod != null && !Translator.ShouldSkipMember(property.SetMethod);
-            preservedAtLeastOneAccessor |= property.HasOtherMethods && property.OtherMethods.Any(method => !Translator.ShouldSkipMember(method));
+            preservedAtLeastOneAccessor |= property.GetMethod != null
+                && Translator.ShouldTranslateMethodBody(property.GetMethod, TypeInfo.GetMemberInformation<Internal.MethodInfo>(property.GetMethod), stubbed, out isExternal, out isReplaced, out methodIsProxied);
+            preservedAtLeastOneAccessor |= property.SetMethod != null
+                && Translator.ShouldTranslateMethodBody(property.SetMethod, TypeInfo.GetMemberInformation<Internal.MethodInfo>(property.SetMethod), stubbed, out isExternal, out isReplaced, out methodIsProxied);
+            preservedAtLeastOneAccessor |= property.HasOtherMethods && property.OtherMethods.Any(
+                method => Translator.ShouldTranslateMethodBody(method, TypeInfo.GetMemberInformation<Internal.MethodInfo>(method), stubbed, out isExternal, out isReplaced, out methodIsProxied));
 
             if (!preservedAtLeastOneAccessor) {
                 return;
@@ -910,10 +914,26 @@ namespace JSIL {
 
         public void EmitEvent (
             DecompilerContext context, IAstEmitter astEmitter, 
-            EventDefinition @event, JSRawOutputIdentifier dollar
+            EventDefinition @event, bool stubbed, JSRawOutputIdentifier dollar
         ) {
             if (Translator.ShouldSkipMember(@event))
                 return;
+
+            bool isExternal, isReplaced, methodIsProxied;
+            bool preservedAtLeastOneAccessor = false;
+            preservedAtLeastOneAccessor |= @event.AddMethod != null
+                && Translator.ShouldTranslateMethodBody(@event.AddMethod, TypeInfo.GetMemberInformation<Internal.MethodInfo>(@event.AddMethod), stubbed, out isExternal, out isReplaced, out methodIsProxied);
+            preservedAtLeastOneAccessor |= @event.RemoveMethod != null
+                && Translator.ShouldTranslateMethodBody(@event.RemoveMethod, TypeInfo.GetMemberInformation<Internal.MethodInfo>(@event.RemoveMethod), stubbed, out isExternal, out isReplaced, out methodIsProxied);
+            preservedAtLeastOneAccessor |= @event.InvokeMethod != null
+                && Translator.ShouldTranslateMethodBody(@event.InvokeMethod, TypeInfo.GetMemberInformation<Internal.MethodInfo>(@event.InvokeMethod), stubbed, out isExternal, out isReplaced, out methodIsProxied);
+            preservedAtLeastOneAccessor |= @event.HasOtherMethods && @event.OtherMethods.Any(
+                method => Translator.ShouldTranslateMethodBody(method, TypeInfo.GetMemberInformation<Internal.MethodInfo>(method), stubbed, out isExternal, out isReplaced, out methodIsProxied));
+
+            if (!preservedAtLeastOneAccessor)
+            {
+                return;
+            }
 
             var eventInfo = TypeInfo.GetMemberInformation<Internal.EventInfo>(@event);
             if ((eventInfo == null) || eventInfo.IsIgnored)
