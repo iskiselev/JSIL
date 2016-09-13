@@ -251,8 +251,8 @@
     );
 
     $.Method({ Public: true, Static: false }, "GetMember",
-      new JSIL.MethodSignature(memberArray, [$.String, $jsilcore.TypeRef("System.Reflection.BindingFlags"), $jsilcore.TypeRef("System.Reflection.MemberTypes")]),
-      function (name, flags, types) {
+      new JSIL.MethodSignature(memberArray, [$.String, $jsilcore.TypeRef("System.Reflection.MemberTypes"), $jsilcore.TypeRef("System.Reflection.BindingFlags")]),
+      function (name, types, flags) {
           var result = JSIL.Array.New($jsilcore.System.Reflection.MemberInfo, 0);
 
           var memberCandidates =  JSIL.GetMembersInternal(
