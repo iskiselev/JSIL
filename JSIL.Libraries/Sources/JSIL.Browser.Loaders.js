@@ -291,7 +291,7 @@ function postProcessResultOpera (bytes) {
 
 function loadBinaryFileAsync (uri, onComplete) {
   var postProcessResult = postProcessResultNormal;
-  if (window.navigator.userAgent.indexOf("Opera/") >= 0) {
+  if (typeof window !== "undefined" && window.navigator.userAgent.indexOf("Opera/") >= 0) {
     postProcessResult = postProcessResultOpera;
   }
 
