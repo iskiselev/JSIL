@@ -885,6 +885,15 @@ namespace JSIL {
             if (Translator.ShouldSkipMember(property))
                 return;
 
+            bool preservedAtLeastOneAccessor = false;
+            preservedAtLeastOneAccessor |= property.GetMethod != null && !Translator.ShouldSkipMember(property.GetMethod);
+            preservedAtLeastOneAccessor |= property.SetMethod != null && !Translator.ShouldSkipMember(property.SetMethod);
+            preservedAtLeastOneAccessor |= property.HasOtherMethods && property.OtherMethods.Any(method => !Translator.ShouldSkipMember(method));
+
+            if (!preservedAtLeastOneAccessor) {
+                return;
+            }
+
             var propertyInfo = TypeInfo.GetMemberInformation<Internal.PropertyInfo>(property);
             if ((propertyInfo == null) || propertyInfo.IsIgnored)
                 return;
