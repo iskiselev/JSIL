@@ -204,6 +204,56 @@
       }
     );
 
+    $.Method({ Public: true, Static: false }, "GetMember",
+      new JSIL.MethodSignature(memberArray, [$.String]),
+      function (name) {
+          return JSIL.GetMembersInternal(
+            this,
+            defaultFlags(),
+            null,
+            name,
+            true,
+            $jsilcore.System.Array.Of($jsilcore.System.Reflection.MemberInfo).__Type__
+          );
+      }
+    );
+
+    $.Method({ Public: true, Static: false }, "GetMember",
+      new JSIL.MethodSignature(memberArray, [$.String, $jsilcore.TypeRef("System.Reflection.BindingFlags")]),
+      function (name, flags) {
+          return JSIL.GetMembersInternal(
+            this,
+            flags,
+            null,
+            name,
+            true,
+            $jsilcore.System.Array.Of($jsilcore.System.Reflection.MemberInfo).__Type__
+          );
+      }
+    );
+
+    $.Method({ Public: true, Static: false }, "GetMember",
+      new JSIL.MethodSignature(memberArray, [$.String, $jsilcore.TypeRef("System.Reflection.BindingFlags"), $jsilcore.TypeRef("System.Reflection.MemberTypes")]),
+      function (name, flags, types) {
+          var result = JSIL.Array.New($jsilcore.System.Array.Of($jsilcore.System.Reflection.MemberInfo).__Type__, 0);
+
+          var memberCandidates =  JSIL.GetMembersInternal(
+            this,
+            flags,
+            null,
+            name,
+            true
+          );
+
+          for (var i = 0; i < memberCandidates.length; i++) {
+              if (memberCandidates[i].get_MemberType() && types.value) {
+                  result.push(memberCandidates[i])
+              }
+          }
+
+          return result;
+      }
+    );
     var getMatchingMethodsImpl = function (type, name, flags, argumentTypes, returnType, allMethods) {
       var methods = JSIL.GetMembersInternal(
         type, flags, allMethods ? "$AllMethods" : "MethodInfo", name
