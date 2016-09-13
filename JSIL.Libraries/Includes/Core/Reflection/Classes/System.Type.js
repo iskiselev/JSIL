@@ -235,7 +235,7 @@
     $.Method({ Public: true, Static: false }, "GetMember",
       new JSIL.MethodSignature(memberArray, [$.String, $jsilcore.TypeRef("System.Reflection.BindingFlags"), $jsilcore.TypeRef("System.Reflection.MemberTypes")]),
       function (name, flags, types) {
-          var result = JSIL.Array.New($jsilcore.System.Array.Of($jsilcore.System.Reflection.MemberInfo).__Type__, 0);
+          var result = JSIL.Array.New($jsilcore.System.Reflection.MemberInfo, 0);
 
           var memberCandidates =  JSIL.GetMembersInternal(
             this,
@@ -254,6 +254,7 @@
           return result;
       }
     );
+
     var getMatchingMethodsImpl = function (type, name, flags, argumentTypes, returnType, allMethods) {
       var methods = JSIL.GetMembersInternal(
         type, flags, allMethods ? "$AllMethods" : "MethodInfo", name
