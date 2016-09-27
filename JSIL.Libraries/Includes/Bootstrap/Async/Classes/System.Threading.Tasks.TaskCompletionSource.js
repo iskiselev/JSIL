@@ -2,9 +2,6 @@ JSIL.ImplementExternals("System.Threading.Tasks.TaskCompletionSource`1", functio
   $.Method({ Static: false, Public: true }, ".ctor",
     (new JSIL.MethodSignature(null, [], [])),
     function _ctor() {
-      this.ParentTask = JSIL.$ParentTask;
-      this.InitStack = JSIL.$TaskGetStack();
-
       this.task = new (System.Threading.Tasks.Task$b1.Of(System.Threading.Tasks.TaskCompletionSource$b1.TResult.get(this)))();
     }
   );
@@ -42,15 +39,6 @@ JSIL.ImplementExternals("System.Threading.Tasks.TaskCompletionSource`1", functio
   $.Method({ Static: false, Public: true }, "TrySetException",
     (new JSIL.MethodSignature($.Boolean, [$jsilcore.TypeRef("System.Exception")], [])),
     function TrySetException(exception) {
-      var stack = "\r\nAsync stack (0):" + this.InitStack;
-      var parent = this.ParentTask;
-      var num = 1;
-      while (parent) {
-        stack += "\r\nAsync stack (" + (num++) + "):" + parent.InitStack;
-        parent = parent.ParentTask;
-      }
-
-      exception.asyncStackTrace = stack;
       if (this.task.IsCompleted)
         return false;
 
@@ -91,7 +79,4 @@ JSIL.MakeType({
   );
 
   $.Property({ Static: false, Public: true }, "Task", $jsilcore.TypeRef("System.Threading.Tasks.Task`1", [new JSIL.GenericParameter("TResult", "System.Threading.Tasks.TaskCompletionSource`1")]));
-
-  $.Field({ Static: false, Public: false }, "ParentTask", $.Object);
-  $.Field({ Static: false, Public: false }, "InitStack", $.String);
 });

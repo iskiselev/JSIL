@@ -7,12 +7,6 @@ JSIL.DeclareNamespace("System.Runtime.CompilerServices");
 JSIL.DeclareNamespace("System.Threading");
 JSIL.DeclareNamespace("System.Threading.Tasks");
 
-JSIL.$ParentTask = null;
-
-JSIL.$TaskGetStack = function () {
-  return new Error().stack;
-}
-
 //? include("Classes/System.Runtime.CompilerServices.AsyncVoidMethodBuilder.js"); writeln();
 //? include("Classes/System.Runtime.CompilerServices.AsyncTaskMethodBuilder.js"); writeln();
 //? include("Classes/System.Threading.Tasks.Task.js"); writeln();

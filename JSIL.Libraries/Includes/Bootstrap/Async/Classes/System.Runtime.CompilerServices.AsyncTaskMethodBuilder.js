@@ -10,18 +10,13 @@ JSIL.ImplementExternals("System.Runtime.CompilerServices.AsyncTaskMethodBuilder"
   $.Method({ Static: false, Public: false }, ".ctor",
     (new JSIL.MethodSignature(null, [], [])),
     function _ctor() {
-      this.ParentTask = JSIL.$ParentTask;
-      this.InitStack = JSIL.$TaskGetStack();
     }
   );
 
   $.Method({ Static: true, Public: true }, "Create",
     (new JSIL.MethodSignature($jsilcore.TypeRef("System.Runtime.CompilerServices.AsyncTaskMethodBuilder"), [], [])),
     function Create() {
-      var t = new $jsilcore.System.Runtime.CompilerServices.AsyncTaskMethodBuilder();
-      t.ParentTask = JSIL.$ParentTask;
-      t.InitStack = JSIL.$TaskGetStack();
-      return t;
+      return new $jsilcore.System.Runtime.CompilerServices.AsyncTaskMethodBuilder();
     }
   );
 
@@ -48,43 +43,22 @@ JSIL.ImplementExternals("System.Runtime.CompilerServices.AsyncTaskMethodBuilder"
   $.Method({ Static: false, Public: true }, "Start",
     new JSIL.MethodSignature(null, [$jsilcore.TypeRef("JSIL.Reference", ["!!0"])], ["TStateMachine"]),
     function AwaitOnCompleted(TStateMachine, stateMachine) {
-      this.ParentTask = JSIL.$ParentTask;
-      this.InitStack = JSIL.$TaskGetStack();
-      JSIL.$ParentTask = this;
-
-      try {
-        stateMachine.get().MoveNext();
-      } finally {
-        JSIL.$ParentTask = this.ParentTask;
-      }
+      stateMachine.get().MoveNext();
     }
   );
 
   $.Method({ Static: false, Public: true }, "SetResult",
     new JSIL.MethodSignature(null, [], []),
     function SetResult() {
-      var prevParentTask = JSIL.$ParentTask;
-      JSIL.$ParentTask = this;
-      try {
-        $TaskCompletionSourceOfObject().prototype.TrySetResult.call(this.get_TaskSource(), null);
-      } finally {
-        JSIL.$ParentTask = prevParentTask;
-      }
+      return $TaskCompletionSourceOfObject().prototype.TrySetResult.call(this.get_TaskSource(), null);
     }
   );
 
   $.Method({ Static: false, Public: true }, "SetException",
     new JSIL.MethodSignature(null, [$jsilcore.TypeRef("System.Exception")], []),
     function SetException(exception) {
-      var prevParentTask = JSIL.$ParentTask;
-      JSIL.$ParentTask = this;
-
-      try {
-        //JSIL.Host.warning(exception);
-        $TrySetExceptionSignature().Call($TaskCompletionSourceOfObject().prototype, "TrySetException", null, this.get_TaskSource(), exception);
-      } finally {
-        JSIL.$ParentTask = prevParentTask;
-      }
+      JSIL.Host.warning(exception);
+      $TrySetExceptionSignature().Call($TaskCompletionSourceOfObject().prototype, "TrySetException", null, this.get_TaskSource(), exception);
     }
   );
 
@@ -113,18 +87,13 @@ JSIL.ImplementExternals("System.Runtime.CompilerServices.AsyncTaskMethodBuilder`
   $.Method({ Static: false, Public: false }, ".ctor",
     (new JSIL.MethodSignature(null, [], [])),
     function _ctor() {
-      this.ParentTask = JSIL.$ParentTask;
-      this.InitStack = JSIL.$TaskGetStack();
     }
   );
 
   $.Method({ Static: true, Public: true }, "Create",
     (new JSIL.MethodSignature($.Type, [], [])),
     function Create() {
-      var t = new ($jsilcore.System.Runtime.CompilerServices.AsyncTaskMethodBuilder$b1.Of(this.TResult))();
-      t.ParentTask = JSIL.$ParentTask;
-      t.InitStack = JSIL.$TaskGetStack();
-      return t;
+      return new ($jsilcore.System.Runtime.CompilerServices.AsyncTaskMethodBuilder$b1.Of(this.TResult))();
     }
   );
 
@@ -151,46 +120,24 @@ JSIL.ImplementExternals("System.Runtime.CompilerServices.AsyncTaskMethodBuilder`
   $.Method({ Static: false, Public: true }, "Start",
     new JSIL.MethodSignature(null, [$jsilcore.TypeRef("JSIL.Reference", ["!!0"])], ["TStateMachine"]),
     function AwaitOnCompleted(TStateMachine, stateMachine) {
-      this.ParentTask = JSIL.$ParentTask;
-      this.InitStack = JSIL.$TaskGetStack();
-      JSIL.$ParentTask = this;
-
-      try {
-        stateMachine.get().MoveNext();
-      } finally {
-        JSIL.$ParentTask = this.ParentTask;
-      }
+      stateMachine.get().MoveNext();
     }
   );
 
   $.Method({ Static: false, Public: true }, "SetResult",
     new JSIL.MethodSignature(null, [new JSIL.GenericParameter("TResult", "System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1")], []),
     function SetResult(result) {
-      var prevParentTask = JSIL.$ParentTask;
-      JSIL.$ParentTask = this;
-
-      try {
-        var taskCompletionSource = $jsilcore.System.Threading.Tasks.TaskCompletionSource$b1.Of(this.TResult);
-        return taskCompletionSource.prototype.TrySetResult.call(this.get_TaskSource(), result);
-      } finally {
-        JSIL.$ParentTask = prevParentTask;
-      }
+      var taskCompletionSource = $jsilcore.System.Threading.Tasks.TaskCompletionSource$b1.Of(this.TResult);
+      return taskCompletionSource.prototype.TrySetResult.call(this.get_TaskSource(), result);
     }
   );
 
   $.Method({ Static: false, Public: true }, "SetException",
     new JSIL.MethodSignature(null, [$jsilcore.TypeRef("System.Exception")], []),
     function SetException(exception) {
-      var prevParentTask = JSIL.$ParentTask;
-      JSIL.$ParentTask = this;
-
-      try {
-        //JSIL.Host.warning(exception);
-        var taskCompletionSource = $jsilcore.System.Threading.Tasks.TaskCompletionSource$b1.Of(this.TResult);
-        $TrySetExceptionSignature().Call(taskCompletionSource.prototype, "TrySetException", null, this.get_TaskSource(), exception);
-      } finally {
-        JSIL.$ParentTask = prevParentTask;
-      }
+      JSIL.Host.warning(exception);
+      var taskCompletionSource = $jsilcore.System.Threading.Tasks.TaskCompletionSource$b1.Of(this.TResult);
+      $TrySetExceptionSignature().Call(taskCompletionSource.prototype, "TrySetException", null, this.get_TaskSource(), exception);
     }
   );
 
@@ -254,9 +201,6 @@ JSIL.MakeType({
   );
 
   $.Property({ Static: false, Public: true }, "Task", $jsilcore.TypeRef("System.Threading.Tasks.Task"));
-
-  $.Field({ Static: false, Public: false }, "ParentTask", $.Object);
-  $.Field({ Static: false, Public: false }, "InitStack", $.String);
 });
 
 JSIL.MakeType({
@@ -306,7 +250,4 @@ JSIL.MakeType({
   );
 
   $.Property({ Static: false, Public: true }, "Task", $jsilcore.TypeRef("System.Threading.Tasks.Task`1", [new JSIL.GenericParameter("TResult", "System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1")]));
-
-  $.Field({ Static: false, Public: false }, "ParentTask", $.Object);
-  $.Field({ Static: false, Public: false }, "InitStack", $.String);
 });
