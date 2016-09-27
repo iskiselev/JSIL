@@ -9,39 +9,35 @@ JSIL.ImplementExternals("System.Threading.Tasks.Task", function ($) {
     self.action = null;
     self.exception = null;
 
-    self.ContinueExecution = function () {
-      // TODO: init continuationActions with null on ctor
-      if (this.continuationActions !== undefined) {
-        for (var i in this.continuationActions) {
-          this.continuationActions[i](this);
-        }
-      }
-    }
+    self.promise = new Promise(function (resolve, reject) {
+		self.promiseResolve = resolve;
+	});
 
     self.SetComplete = function () {
       this.status = System.Threading.Tasks.TaskStatus.RanToCompletion;
-      this.ContinueExecution();
+      this.promiseResolve();
     }
 
     self.SetCancel = function () {
       this.status = System.Threading.Tasks.TaskStatus.Canceled;
-      this.ContinueExecution();
+      this.promiseResolve();
     }
 
     self.SetException = function (exception) {
       this.status = System.Threading.Tasks.TaskStatus.Faulted;
       this.exception = $AggregateExceptionConstructorSignature().Construct("One or more errors occured.", exception);
-      this.ContinueExecution();
+      this.promiseResolve();
     }
 
     self.RunTask = function () {
       if (this.action !== null) {
         try {
           this.action();
-          this.SetComplete();
         } catch (e) {
           this.SetException(e);
+		  return;
         }
+		this.SetComplete();
       }
     }
   }
@@ -87,16 +83,7 @@ JSIL.ImplementExternals("System.Threading.Tasks.Task", function ($) {
   $.Method({ Static: false, Public: true }, "ContinueWith",
     (new JSIL.MethodSignature($jsilcore.TypeRef("System.Threading.Tasks.Task"), [$jsilcore.TypeRef("System.Action`1", [$jsilcore.TypeRef("System.Threading.Tasks.Task")])], [])),
     function ContinueWith(continuationAction) {
-      if (this.get_IsCompleted()) {
-        continuationAction(this);
-        return;
-      }
-
-      if (this.continuationActions === undefined) {
-        this.continuationActions = [];
-      }
-
-      this.continuationActions.push(continuationAction);
+      this.promise.then(() => continuationAction(this));
     }
   );
 
@@ -132,10 +119,11 @@ JSIL.ImplementExternals("System.Threading.Tasks.Task`1", function ($) {
       if (this.$function !== null) {
         try {
           this.result = this.$function();
-          this.SetComplete();
         } catch (e) {
           this.SetException(e);
+		  return;
         }
+		this.SetComplete();
       }
     }
   }
@@ -143,11 +131,7 @@ JSIL.ImplementExternals("System.Threading.Tasks.Task`1", function ($) {
   $.Method({ Static: false, Public: true }, "ContinueWith",
     new JSIL.MethodSignature($jsilcore.TypeRef("System.Threading.Tasks.Task"), [$jsilcore.TypeRef("System.Action`1", [$.Type])], []),
     function ContinueWith(continuationAction) {
-      if (this.continuationActions === undefined) {
-        this.continuationActions = [];
-      }
-
-      this.continuationActions.push(continuationAction);
+	  this.promise.then(() => continuationAction(this));
     }
   );
 
