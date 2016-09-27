@@ -6,12 +6,13 @@ JSIL.ImplementExternals("System.Threading.Tasks.Task", function ($) {
   // TODO: Find solution to remove closure
   var createTaskCommon = function (self) {
     self.status = System.Threading.Tasks.TaskStatus.Created;
+    self.isComplete = false;
     self.action = null;
     self.exception = null;
 
     self.promise = new Promise(function (resolve, reject) {
-		self.promiseResolve = resolve;
-	});
+      self.promiseResolve = resolve;
+    }).then(function () { self.isComplete = true; });
 
     self.SetComplete = function () {
       this.status = System.Threading.Tasks.TaskStatus.RanToCompletion;
@@ -35,9 +36,9 @@ JSIL.ImplementExternals("System.Threading.Tasks.Task", function ($) {
           this.action();
         } catch (e) {
           this.SetException(e);
-		  return;
+          return;
         }
-		this.SetComplete();
+        this.SetComplete();
       }
     }
   }
@@ -74,9 +75,7 @@ JSIL.ImplementExternals("System.Threading.Tasks.Task", function ($) {
   $.Method({ Static: false, Public: true }, "get_IsCompleted",
     (new JSIL.MethodSignature($.Boolean, [], [])),
     function get_IsCompleted() {
-      return (this.status == System.Threading.Tasks.TaskStatus.RanToCompletion
-            || this.status == System.Threading.Tasks.TaskStatus.Canceled
-            || this.status == System.Threading.Tasks.TaskStatus.Faulted);
+      return this.isComplete;
     }
   );
 
@@ -121,9 +120,9 @@ JSIL.ImplementExternals("System.Threading.Tasks.Task`1", function ($) {
           this.result = this.$function();
         } catch (e) {
           this.SetException(e);
-		  return;
+          return;
         }
-		this.SetComplete();
+        this.SetComplete();
       }
     }
   }
@@ -131,7 +130,7 @@ JSIL.ImplementExternals("System.Threading.Tasks.Task`1", function ($) {
   $.Method({ Static: false, Public: true }, "ContinueWith",
     new JSIL.MethodSignature($jsilcore.TypeRef("System.Threading.Tasks.Task"), [$jsilcore.TypeRef("System.Action`1", [$.Type])], []),
     function ContinueWith(continuationAction) {
-	  this.promise.then(() => continuationAction(this));
+      this.promise.then(() => continuationAction(this));
     }
   );
 
